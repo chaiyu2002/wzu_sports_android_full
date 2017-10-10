@@ -503,7 +503,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
 
     public void queryAppVersion() {
         ServerInterface.instance().queryAppVersion(new JsonResponseCallback() {
-            private JSONObject latestAndroidVersionInfo;
+            private JSONObject latestVersion;
 
             @Override
             public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
@@ -514,13 +514,13 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                 //                boolean isForced = false;
                 if (errCode == 0) {
                     try {
-                        latestAndroidVersionInfo = json.getJSONObject("data").getJSONObject("latestVerison");
-                        final String versionName = latestAndroidVersionInfo.getString("versionName");
-                        final int versionCode = latestAndroidVersionInfo.getInt("versionCode");
-                        final String changeLog = latestAndroidVersionInfo.getString("changeLog");
-                        final String downloadUrl = latestAndroidVersionInfo.getString("downloadUrl");
-                        final boolean isForced = latestAndroidVersionInfo.getBoolean("isForced");
-                        final int platformId = latestAndroidVersionInfo.getInt("platformId");
+                        latestVersion = json.getJSONObject("data").getJSONObject("latestVerison");
+                        final String versionName = latestVersion.getString("versionName");
+                        final int versionCode = latestVersion.getInt("versionCode");
+                        final String changeLog = latestVersion.getString("changeLog");
+                        final String downloadUrl = latestVersion.getString("downloadUrl");
+                        final boolean isForced = latestVersion.getBoolean("isForced");
+                        final int platformId = latestVersion.getInt("platformId");
 
                         PackageManager manager = context.getPackageManager();
                         PackageInfo info = manager.getPackageInfo(context.getPackageName(), 0);
@@ -539,12 +539,6 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             DownloadAppUtils.downloadForAutoInstall(context, downloadUrl, "下载新版本");
-                                            if (isForced) {
-                                                //无操作
-                                            } else {
-                                                // TODO
-                                                // queryHomePagedata();
-                                            }
                                         }
                                     });
                             builder.setMessage(changeLog.replace("\\n", " \n"));
@@ -556,9 +550,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                                 builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
-                                        //TODO
                                         dialog.dismiss();
-                                        // queryHomePagedata();
                                     }
                                 });
                             }
