@@ -54,8 +54,6 @@ public class SplashActivity extends BaseActivity implements SplashADListener{
 
     private static int DELAY_TIME = 500;
 
-    private Button btLogin;
-
     private SplashAD splashAD;
     private ViewGroup container;
     private TextView skipView;
@@ -89,16 +87,12 @@ public class SplashActivity extends BaseActivity implements SplashADListener{
 
         if (!(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
             lackedPermission.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        } else {
+            UserManager.instance().cleanCache();
         }
 
         if (!(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
             lackedPermission.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
-
-        if (!(ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE);
-        } else {
-            UserManager.instance().cleanCache();
         }
 
         // 权限都已经有了，那么直接调用SDK
@@ -195,30 +189,10 @@ public class SplashActivity extends BaseActivity implements SplashADListener{
 
     }
 
-    Handler mHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case MESSAGE_WHAT_GOTO_MAINACTIVITY:
-                    if (UserManager.instance().isLogin()) {
-                        Intent main_intent = new Intent(SplashActivity.this, MainActivity.class);
-                        main_intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                        startActivity(main_intent);
-                        finish();
-                    }
-                    break;
-            }
-        }
-    };
-
-    private void handleIntent() {
-        mHandler.sendEmptyMessageDelayed(MESSAGE_WHAT_GOTO_MAINACTIVITY, DELAY_TIME);
-    }
 
     @Override
     protected void onResume() {
         super.onResume();
-        handleIntent();
-        hideLoadingDialog();
         if (canJump) {
             next();
         }
@@ -234,10 +208,6 @@ public class SplashActivity extends BaseActivity implements SplashADListener{
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        OkHttpUtils.getInstance().cancelTag(TAG);
-        if (mHandler != null) {
-            mHandler.removeCallbacksAndMessages(null);
-        }
         hideLoadingDialog();
     }
 
@@ -254,7 +224,6 @@ public class SplashActivity extends BaseActivity implements SplashADListener{
                 String.format("LoadSplashADFail, eCode=%d, errorMsg=%s", error.getErrorCode(),
                         error.getErrorMsg()));
         /** 如果加载广告失败，则直接跳转 */
-//        this.startActivity(new Intent(this, MainActivity.class));
         navigateToNext();
         this.finish();
     }
@@ -291,7 +260,6 @@ public class SplashActivity extends BaseActivity implements SplashADListener{
      */
     private void next() {
         if (canJump) {
-//            this.startActivity(new Intent(this, MainActivity.class));
             navigateToNext();
             this.finish();
         } else {
