@@ -69,6 +69,8 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
     private static final String TAG = "MainActivity";
     public static final int SPORT_BACKGROUND_WIDTH = 1080;
     public static final int SPORT_BACKGROUND_HEIGHT = 465;
+    public static final String APP_ID = "wx24a2c72c638267d7";
+    public static final String APP_USER_NAME = "gh_2a8433042436";
 
     //    public static User user;
     //    public static Student student;
@@ -239,11 +241,15 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                                 //                                    break;
                                 //                                case R.id.nav_approval://审批
                                 //                                    break;
-                                //                                case R.id.nav_customer_service://客服
-                                //                                    break;
+                                case R.id.nav_customer_service://客服
+                                    IWXAPI api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID, false);
+                                    WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
+                                    req.userName = APP_USER_NAME;
+                                    api.sendReq(req);
+                                    break;
                                 case R.id.nav_set://设置
-                                    Intent intentSetting = new Intent(MainActivity.this, SettingActivity.class);
-                                    startActivity(intentSetting);
+                                     Intent intentSetting = new Intent(MainActivity.this, SettingActivity.class);
+                                     startActivity(intentSetting);
                                     break;
                             }
                             return true;
