@@ -24,6 +24,10 @@ public class TabAdapter extends FragmentPagerAdapter {
         titles.add(title);
     }
 
+    public void removeFragment(){
+        fragments.clear();
+    }
+
     @Override
     public Fragment getItem(int position) {
         return fragments.get(position);

@@ -20,6 +20,7 @@ public class SportEntry implements Serializable {
     private String targetSpeed;//目标速度
     private String imgUrl;//背景图片地址
     private int bgDrawableId;//背景图片id
+    private int stepThreshold;//计步阈值
     private int type;//运动方式
 
     public int getAcquisitionInterval() {
@@ -51,6 +52,14 @@ public class SportEntry implements Serializable {
 
     public void setQualifiedDistance(int qualifiedDistance) {
         this.qualifiedDistance = qualifiedDistance;
+    }
+
+    public int getStepThreshold() {
+        return stepThreshold;
+    }
+
+    public void setStepThreshold(int stepThreshold) {
+        this.stepThreshold = stepThreshold;
     }
 
     public String getTargetSpeed() {

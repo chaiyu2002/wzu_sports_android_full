@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/dialog_corner_bg"
+                android:orientation="vertical"
+                android:paddingBottom="@dimen/dimen_16"
+    >
+
+    <ImageView
+        android:id="@+id/dialog_img"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/dimen_12"
+        android:src="@drawable/ic_launcher"
+        />
+
+
+    <TextView
+        android:id="@+id/dialog_txt_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/dialog_img"
+        android:layout_centerInParent="true"
+        android:layout_margin="@dimen/dimen_16"
+        android:gravity="center"
+        android:textSize="14dp"
+        tools:text="下载失败，请重试"
+        />
+
+
+    <TextView
+        android:id="@+id/dialog_btn_confirm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/dialog_txt_content"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/bg_btn_blue_big"
+        android:gravity="center"
+        android:paddingBottom="@dimen/dimen_8"
+        android:paddingLeft="@dimen/dimen_64"
+        android:paddingRight="@dimen/dimen_64"
+        android:paddingTop="@dimen/dimen_8"
+        tools:text="重试"
+        android:textColor="@color/colorWhite"
+        />
+
+</RelativeLayout>

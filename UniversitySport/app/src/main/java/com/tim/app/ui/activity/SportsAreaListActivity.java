@@ -20,7 +20,6 @@ import com.application.library.widget.recycle.HorizontalDividerItemDecoration;
 import com.application.library.widget.recycle.WrapRecyclerView;
 import com.tim.app.R;
 import com.tim.app.RT;
-import com.tim.app.constant.AppConstant;
 import com.tim.app.server.api.ServerInterface;
 import com.tim.app.server.entry.FixLocationOutdoorSportPoint;
 import com.tim.app.server.entry.SportEntry;
@@ -32,6 +31,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.tim.app.constant.AppConstant.student;
 
 /**
  * 运动区域
@@ -124,7 +125,7 @@ public class SportsAreaListActivity extends BaseActivity implements LoadMoreHand
      * 查询区域运动记录
      */
     public void queryAreaSportData() {
-        ServerInterface.instance().queryAreaFixedLocationList(AppConstant.UNIVERSITY_ID, new JsonResponseCallback() {
+        ServerInterface.instance().queryAreaFixedLocationList(student.getUniversityId(), new JsonResponseCallback() {
             @Override
             public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                 if (errCode == 0) {

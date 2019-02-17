@@ -67,6 +67,7 @@ import com.tim.app.sport.SQLite;
 import com.tim.app.ui.dialog.LocationDialog;
 import com.tim.app.ui.dialog.ProgressDialog;
 import com.tim.app.ui.view.SlideUnlockView;
+import com.tim.app.ui.view.webview.WebViewActivity;
 import com.tim.app.util.BrightnessUtil;
 import com.tim.app.util.PermissionUtil;
 
@@ -74,6 +75,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static com.tim.app.constant.AppConstant.student;
 
@@ -108,7 +113,7 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
     /*基本控件*/
     // private LinearLayout llLacationHint;
     private TextView tvResult;//运动结果
-    private ImageView ivLocation;  //页面左下角定位图标
+    private LinearLayout llResult;//运动结果父容器
     private TextView tvAreaName; //区域地点名字
     private TextView tvSelectLocation;//选择区域
     private RelativeLayout rlTopFloatingWindow; //浮动窗顶部地点名字块
@@ -125,15 +130,18 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
     private SlideUnlockView slideUnlockView;
     private TextView tvPause;
     private View rlAnimView;
+    private ImageView ivLocation;  //页面左下角定位图标
+    private ImageView ivHelp;
+    private ImageView ivFinished;
 
     private LocationDialog locationDialog;
     private ProgressDialog progressDialog;
 
-    /*屏幕亮度*/
-    private int screenOffTimeout; //屏幕超时时间
-    private int screenKeepLightTime;
-    private int brightness;
-    private boolean autoAdjustBrightness;
+//    /*屏幕亮度*/
+//    private int screenOffTimeout; //屏幕超时时间
+//    private int screenKeepLightTime;
+//    private int brightness;
+//    private boolean autoAdjustBrightness;
 
     /*初始化变量*/
     static final int STATE_NORMAL = 0;//初始状态
@@ -163,6 +171,11 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
     /*组件*/
     private LocationService.MyBinder myBinder = null;
 
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+    private Runnable elapseTimeRunnable;
+    private ScheduledFuture<?> timerHandler = null;
+    private long timerInterval = 1000;
+
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceDisconnected(ComponentName name) {
@@ -181,6 +194,18 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
         intent.putExtra("sportEntry", sportEntry);
         intent.putExtra("fixLocationOutdoorSportPoint", fixLocationOutdoorSportPoint);
         context.startActivity(intent);
+    }
+
+    private void startTimer() {
+        timerHandler = scheduler.scheduleAtFixedRate(elapseTimeRunnable, 0, timerInterval, TimeUnit.MILLISECONDS);
+    }
+
+    private void stopTimer() {
+        if (timerHandler != null) {
+            timerHandler.cancel(true);
+            scheduler.shutdown();
+            timerHandler = null;
+        }
     }
 
     /****************  <初始化开始> *****************/
@@ -277,7 +302,9 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
         initMap();
         //        mAMapGeoFence = new AMapGeoFence(this.getApplicationContext(), aMap, handler);
 
-        startService(new Intent(this, LocationService.class));
+        Intent intent = new Intent(this, LocationService.class);
+        intent.putExtra("type", "区域");
+        startService(intent);
 
         aMap.setOnCameraChangeListener(new AMap.OnCameraChangeListener() {
             @Override
@@ -345,16 +372,16 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
     public void initData() {
         float batteryLevel = getBatteryLevel();
         Toast.makeText(this, "当前电量： " + batteryLevel + "%， 请及时充电，保持电量充足", Toast.LENGTH_LONG).show();
-        screenOffTimeout = Settings.System.getInt(getContentResolver(),
-                Settings.System.SCREEN_OFF_TIMEOUT, 0) / 1000;
-
-        autoAdjustBrightness = BrightnessUtil.isAutoAdjustBrightness(context);
-        if (autoAdjustBrightness) {
-            brightness = BrightnessUtil.getScreenBrightness(this);
-            BrightnessUtil.stopAutoAdjustBrightness(context);
-        } else {
-            brightness = BrightnessUtil.getScreenBrightness(this);
-        }
+//        screenOffTimeout = Settings.System.getInt(getContentResolver(),
+//                Settings.System.SCREEN_OFF_TIMEOUT, 0) / 1000;
+//
+//        autoAdjustBrightness = BrightnessUtil.isAutoAdjustBrightness(context);
+//        if (autoAdjustBrightness) {
+//            brightness = BrightnessUtil.getScreenBrightness(this);
+//            BrightnessUtil.stopAutoAdjustBrightness(context);
+//        } else {
+//            brightness = BrightnessUtil.getScreenBrightness(this);
+//        }
 
 
         if (!TextUtils.isEmpty(fixLocationOutdoorSportPoint.getAreaName())) {
@@ -379,6 +406,21 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
 
         setupArea();
 
+        elapseTimeRunnable = new Runnable() {
+            public void run() {
+                // If you need update UI, simply do this:
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        // update your UI component here.
+                        elapseTime += timerInterval / 1000;
+                        DLOG.d(TAG, "elapseTime: " + elapseTime);
+                        String time = com.tim.app.util.TimeUtil.formatMillisTime(elapseTime * 1000);
+                        tvElapsedTime.setText(time);
+                    }
+                });
+            }
+        };
+
         CameraUpdate cu = CameraUpdateFactory.newCameraPosition(
                 new CameraPosition(targetLatLngs.get(0), zoomLevel, 0, 0));
         aMap.moveCamera(cu);
@@ -399,6 +441,7 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
                     if (state == STATE_STARTED) {
                         state = STATE_END;
 
+                        stopTimer();
                         //结束本次运动
                         areaActivitiesEnd(areaSportRecordId);
 
@@ -449,8 +492,11 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
         rlTopFloatingWindow = (RelativeLayout) findViewById(R.id.rlTopFloatingWindow);
         tvElapsedTime = (TextView) findViewById(R.id.tvElapsedTime);
         tvResult = (TextView) findViewById(R.id.tvResult);
+        llResult = (LinearLayout) findViewById(R.id.llResult);
         tvParticipantNum = (TextView) findViewById(R.id.tvParticipantNum);
         ivLocation = (ImageView) findViewById(R.id.ivLocation);
+        ivHelp = (ImageView) findViewById(R.id.ivHelp);
+        ivFinished = (ImageView) findViewById(R.id.ivFinished);
         tvAreaName = (TextView) findViewById(R.id.tvAreaName);
         tvSelectLocation = (TextView) findViewById(R.id.tvSelectLocation);
         rlAreaDesc = (RelativeLayout) findViewById(R.id.rlAreaDesc);
@@ -526,15 +572,15 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
         DLOG.d(TAG, "zbc");
         //运动耗时
         if (state == STATE_STARTED) {
-            // DLOG.d(TAG, "elapseTime:" + elapseTime);
-            // MyLocationStyle myLocationStyle = aMap.getMyLocationStyle();
-            // DLOG.d(TAG, "myLocationStyle.getInterval():" + myLocationStyle.getInterval());
+            DLOG.d(TAG, "elapseTime:" + elapseTime);
+            MyLocationStyle myLocationStyle = aMap.getMyLocationStyle();
+            DLOG.d(TAG, "myLocationStyle.getInterval():" + myLocationStyle.getInterval());
 
-            if (!isFirst) {
-                elapseTime += acquisitionInterval / 1000;
-                tvElapsedTime.setText(elapseTime / 60 + " 分钟");
-            }
-            // DLOG.d(TAG, "elapseTime:" + elapseTime);
+            //            elapseTime = (long) ((System.currentTimeMillis() - startTime + 0.5) / 1000);
+            //            String time = com.tim.app.util.TimeUtil.formatMillisTime(elapseTime * 1000);
+            //            Log.d(TAG, "elapseTime:" + elapseTime);
+            //            tvElapsedTime.setText(time);
+            //            DLOG.d(TAG, "elapseTime:" + elapseTime);
         }
 
         Bundle bundle = location.getExtras();
@@ -548,12 +594,12 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
 
         //屏幕到了锁屏的时间，调暗亮度，采样时间太长了导致不容易测试
         WindowManager.LayoutParams params = getWindow().getAttributes();
-        screenKeepLightTime += interval / 1000;
-        if (screenOffTimeout <= screenKeepLightTime && Float.compare(params.screenBrightness, 0.1f) != 0) {
-            params.screenBrightness = (float) 0.1;
-            getWindow().setAttributes(params);
-            DLOG.d(TAG, "onMyLocationChange turn down light");
-        }
+//        screenKeepLightTime += interval / 1000;
+//        if (screenOffTimeout <= screenKeepLightTime && Float.compare(params.screenBrightness, 0.1f) != 0) {
+//            params.screenBrightness = (float) 0.1;
+//            getWindow().setAttributes(params);
+//            DLOG.d(TAG, "onMyLocationChange turn down light");
+//        }
 
         if (location != null) {
             //定位成功
@@ -605,7 +651,7 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
                 boolean isContains = circle.contains(lastLatLng);
                 if (!isContains) {
                     isNormal = false;
-                    Toast.makeText(context, "你已离开运动区域，请回到运动区域进行锻炼", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "你已离开运动区域，请回到运动区域进行锻炼", Toast.LENGTH_LONG).show();
                 }
 
                 //// 向服务器提交数据
@@ -683,9 +729,9 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
         super.onDestroy();
         mapView.onDestroy();
 
-        if (autoAdjustBrightness) {
-            BrightnessUtil.startAutoAdjustBrightness(this);
-        }
+//        if (autoAdjustBrightness) {
+//            BrightnessUtil.startAutoAdjustBrightness(this);
+//        }
 
         //        Log.d(TAG, "onDestroy");
 
@@ -758,6 +804,7 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
                                 new CameraPosition(targetLatLngs.get(0), zoomLevel, 0, 0));
                         aMap.moveCamera(cu);
                         allowStart();
+                        startTimer();
                         // DLOG.d(TAG, "onClick：elapseTime:" + elapseTime);
                     } else {
                         Toast.makeText(this, "请到指定运动区域进行锻炼", Toast.LENGTH_SHORT).show();
@@ -815,6 +862,7 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
                     if (errCode == 0) {
                         DLOG.d(TAG, "areaSportsStart 成功");
                         state = STATE_STARTED;
+                        startTime = System.currentTimeMillis();
                         JSONObject jsonObject = json.optJSONObject("obj");
 
                         areaSportRecordId = jsonObject.optInt("id");
@@ -829,18 +877,12 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
                                     public boolean onResponse(Object result, int status, String errmsg, int id, boolean fromcache) {
                                         if (status == 0) {
                                             DLOG.d(TAG, "第一次上传 areaActivityData 成功!");
-                                            startTime = System.currentTimeMillis();
-
-                                            if (isFirst) {
-                                                elapseTime = 0;
-                                                isFirst = false;
-                                            }
 
                                             slideUnlockView.setVisibility(View.VISIBLE);
                                             tvPause.setVisibility(View.VISIBLE);
                                             rlElapsedTime.setVisibility(View.VISIBLE);
                                             rlAreaDesc.setVisibility(View.GONE);
-                                            tvSelectLocation.setVisibility(View.INVISIBLE);
+                                            tvSelectLocation.setVisibility(View.GONE);
 
                                             progressDialog.dismissCurrentDialog();
 
@@ -956,20 +998,58 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
                             historySportEntry.setStartTime(jsonObject.optLong("startTime"));
                             historySportEntry.setKcalConsumed(jsonObject.optInt("kcalConsumed"));
                             historySportEntry.setQualified(jsonObject.optBoolean("qualified"));
+
+                            historySportEntry.setVerified(jsonObject.optBoolean("isVerified"));
+                            //historySportEntry.setVerified(true);    //先写死，以后用的时候再改
+
                             historySportEntry.setQualifiedCostTime(jsonObject.optInt("qualifiedCostTime"));
                             historySportEntry.setCreatedAt(jsonObject.optLong("createdAt"));
                             historySportEntry.setUpdatedAt(jsonObject.optLong("updatedAt"));
                             historySportEntry.setEndedAt(jsonObject.optLong("endedAt"));
                             historySportEntry.setEndedBy(jsonObject.optBoolean("endedBy"));
                             historySportEntry.setType(AppConstant.AREA_TYPE);
-                            if (historySportEntry.isQualified()) {
-                                tvResult.setText("达标");
-                                tvResult.setTextColor(Color.GREEN);
+
+                            //非正常结束
+                            if (historySportEntry.getEndedAt() == 0) {
+                                tvResult.setText("未结束");
+                                tvResult.setTextColor(Color.parseColor("#FF9800"));
+                                ivHelp.setVisibility(View.VISIBLE);
                             } else {
-                                tvResult.setText("未达标");
-                                tvResult.setTextColor(Color.RED);
+                                //是否达标
+                                if (historySportEntry.isQualified()) {
+                                    //是否审核
+                                    if (historySportEntry.isVerified()) {
+                                        //是否有效
+                                        if (historySportEntry.isValid()) {
+                                            tvResult.setText("达标");
+                                            tvResult.setTextColor(Color.parseColor("#4CAF50"));
+                                            ivFinished.setVisibility(View.VISIBLE);
+                                        } else {
+                                            tvResult.setText("审核未通过");
+                                            tvResult.setTextColor(Color.RED);
+                                            ivHelp.setVisibility(View.VISIBLE);
+                                        }
+                                    } else {
+                                        tvResult.setText("达标待审核");
+                                        tvResult.setTextColor(Color.parseColor("#4CAF50"));
+                                        ivHelp.setVisibility(View.VISIBLE);
+                                    }
+                                } else {
+                                    tvResult.setText("未达标");
+                                    tvResult.setTextColor(Color.parseColor("#FF9800"));
+                                    ivHelp.setVisibility(View.VISIBLE);
+                                }
                             }
+
                             tvResult.setVisibility(View.VISIBLE);
+                            DLOG.d(TAG, "historySportEntry.isQualified():" + historySportEntry.isQualified());
+                            llResult.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    WebViewActivity.loadUrl(SportFixedLocationActivity.this, "http://www.guangyangyundong.com:86/#/help", "帮助中心");
+                                    overridePendingTransition(R.anim.right_in, R.anim.left_out);
+                                }
+                            });
                             return true;
                         } else {
                             Toast.makeText(SportFixedLocationActivity.this, COMMIT_FALIED_MSG, Toast.LENGTH_SHORT).show();
@@ -1007,14 +1087,14 @@ public class SportFixedLocationActivity extends BaseActivity implements AMap.OnM
     private void turnUpScreen() {
         boolean needToAdjustBrightness = Float.compare(BrightnessUtil.getScreenBrightness(getWindow()), 0.1f) == 0;
 
-        if (needToAdjustBrightness) {
-            if (BrightnessUtil.isAutoAdjustBrightness(this)) {
-                BrightnessUtil.setScreenBrightness(this, brightness);
-            } else {
-                BrightnessUtil.setScreenBrightness(this, brightness);
-            }
-        }
-        screenKeepLightTime = 0;
+//        if (needToAdjustBrightness) {
+//            if (BrightnessUtil.isAutoAdjustBrightness(this)) {
+//                BrightnessUtil.setScreenBrightness(this, brightness);
+//            } else {
+//                BrightnessUtil.setScreenBrightness(this, brightness);
+//            }
+//        }
+//        screenKeepLightTime = 0;
     }
 
 

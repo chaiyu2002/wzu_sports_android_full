@@ -1,6 +1,8 @@
 package com.tim.app.ui.activity;
 
 import android.Manifest;
+import android.app.AppOpsManager;
+import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -14,9 +16,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.BatteryManager;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -25,8 +30,10 @@ import android.support.v4.app.AppOpsManagerCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -54,13 +61,10 @@ import com.amap.api.maps.model.PolylineOptions;
 import com.application.library.log.DLOG;
 import com.application.library.net.JsonResponseCallback;
 import com.application.library.net.ResponseCallback;
-import com.application.library.runtime.event.EventListener;
-import com.application.library.runtime.event.EventManager;
 import com.application.library.util.NetUtils;
 import com.lzy.okhttputils.OkHttpUtils;
 import com.tim.app.R;
 import com.tim.app.constant.AppConstant;
-import com.tim.app.constant.EventTag;
 import com.tim.app.server.api.ServerInterface;
 import com.tim.app.server.entry.HistoryRunningSportEntry;
 import com.tim.app.server.entry.SportEntry;
@@ -69,8 +73,10 @@ import com.tim.app.sport.SensorService;
 import com.tim.app.ui.dialog.LocationDialog;
 import com.tim.app.ui.dialog.ProgressDialog;
 import com.tim.app.ui.view.SlideUnlockView;
+import com.tim.app.ui.view.webview.WebViewActivity;
 import com.tim.app.util.BrightnessUtil;
 import com.tim.app.util.MathUtil;
+import com.tim.app.util.SystemUtil;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -115,7 +121,8 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     private int currentDistance = 0;
     private long elapseTime = 0;
     //    private long previousTime = 0;
-    private int currentSteps = 0;
+    private int currentSteps = 0;  // 最终的步数
+    private int stepCounter = 0;
     private int stepCountCal = 0;
     private int lastSteps = 0;
     private long startTime;//开始时间
@@ -124,6 +131,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     private int initCalcSteps = 0;//初始化的步数
     private double distancePerStep = 0; //步幅
     private double stepPerSecond = 0; //步幅
+    private int acquisitionTimes = 1;//两点相似次数
     private LocationManager locationManager;
 
     private TextView tvSportName;
@@ -137,7 +145,10 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     private TextView tvTargetSpeedLabel;
     private TextView tvTargetSpeed;
     private TextView tvResult;//运动结果
+    private LinearLayout llResult;//运动结果父容器
     private ImageView ivLocation;
+    private ImageView ivHelp;
+    private ImageView ivFinished;
     private TextView tvStepTitle;
     //    private TextView tvCurrentStep;//暂时注释，记得全部放开注释
     private LinearLayout llTargetContainer;
@@ -164,12 +175,25 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     static final int STATE_STARTED = 1;//已开始
     static final int STATE_PAUSE = 2;//暂停
     static final int STATE_END = 3;//结束
+    static final int STATE_NETWORK_ERROR = 4;//网络原因结束
     private int state = STATE_NORMAL;
+    // 定位提示最少显示 3 秒钟
+    private static final int WARM_UP_TIME = 3000;
 
-    private int screenOffTimeout; //屏幕超时时间
-    private int screenKeepLightTime;
-    private int brightness;
-    private boolean autoAdjustBrightness;
+    private Handler handler = new Handler();
+    private Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            if (locationDialog != null && locationDialog.isShowing()) {
+                locationDialog.dismissCurrentDialog();
+            }
+        }
+    };
+
+//    private int screenOffTimeout; //屏幕超时时间
+//    private int screenKeepLightTime;
+//    private int brightness;
+//    private boolean autoAdjustBrightness;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private Runnable elapseTimeRunnable;
@@ -195,7 +219,12 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
 
     public static final String COMMIT_FALIED_MSG = "网络错误，数据提交失败，请随后查看历史记录";
 
+    public static final String COMMIT_AGAIN_MSG = "请检查网络设置，并到开旷地点重试";
+
+    public int commitTimes = 0;
+
     public static final String OPEN_GPS_MSG = "需要打开GPS才能开始运动...";
+
 
     private ServiceConnection connection = new ServiceConnection() {
 
@@ -210,6 +239,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
             myBinder.startLocationInService(interval);
         }
     };
+    private AlertDialog openLocationServiceDialog;
 
     public static void start(Context context, SportEntry sportEntry) {
         Intent intent = new Intent(context, SportDetailActivity.class);
@@ -237,35 +267,53 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         // 判断GPS模块是否开启，如果没有则开启
         if (!locationManager
                 .isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
-            //            Toast.makeText(this, "定位服务未打开，请打开定位服务",
-            //                    Toast.LENGTH_SHORT).show();
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setMessage("定位服务未打开，请打开定位服务");
-            builder.setPositiveButton("确定",
-                    new android.content.DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface arg0, int arg1) {
-                            // 转到手机设置界面，用户设置GPS
-                            Intent intent = new Intent(
-                                    Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                            startActivityForResult(intent, 0); // 设置完成后返回到原来的界面
-                        }
-                    });
-            //            locationDialog.setNeutralButton("取消", new android.content.DialogInterface.OnClickListener() {
-            //                @Override
-            //                public void onClick(DialogInterface arg0, int arg1) {
-            //                    arg0.dismiss();
-            //                }
-            //            });
-
-            AlertDialog dialog = builder.show();
-            TextView message = (TextView) dialog.findViewById(android.R.id.message);
-            Button positiveButton = (Button) dialog.findViewById(android.R.id.button1);
-            positiveButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            message.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            buildLocationServiceDialog();
         } else {
             locationDialog.show();
         }
+    }
+
+    private void buildLocationServiceDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("重要提示");
+        builder.setMessage("请打开定位服务，并授予定位权限~");
+        builder.setPositiveButton("去设置",
+                new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface arg0, int arg1) {
+                        Intent intent = new Intent(
+                                Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivityForResult(intent, 0);
+                    }
+                });
+
+        openLocationServiceDialog = builder.create();
+        openLocationServiceDialog.setCancelable(false);
+        openLocationServiceDialog.show();
+        openLocationServiceDialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                    openLocationServiceDialog.dismiss();
+                    finish();
+                }
+                return false;
+            }
+        });
+        openLocationServiceDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(
+                        Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivityForResult(intent, 0);
+                // dialog.dismiss();
+            }
+        });
+
+        TextView message = (TextView) openLocationServiceDialog.findViewById(android.R.id.message);
+        Button positiveButton = (Button) openLocationServiceDialog.findViewById(android.R.id.button1);
+        positiveButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        message.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
     }
 
     @Override
@@ -276,29 +324,37 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         if (requestCode == 0) {
             if (locationManager
                     .isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
+                openLocationServiceDialog.dismiss();
                 locationDialog.show();
             } else {
-                Toast.makeText(this, OPEN_GPS_MSG, Toast.LENGTH_SHORT).show();
+                // Toast.makeText(this, OPEN_GPS_MSG, Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    private void getAppDetailSettingIntent(Context context) {
+        Intent localIntent = new Intent();
+        localIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (Build.VERSION.SDK_INT >= 9) {
+            localIntent.setAction("android.settings.APPLICATION_DETAILS_SETTINGS");
+            localIntent.setData(Uri.fromParts("package", getPackageName(), null));
+        } else if (Build.VERSION.SDK_INT <= 8) {
+            localIntent.setAction(Intent.ACTION_VIEW);
+            localIntent.setClassName("com.android.settings", "com.android.settings.InstalledAppDetails");
+            localIntent.putExtra("com.android.settings.ApplicationPkgName", getPackageName());
+        }
+        startActivity(localIntent);
     }
 
     @Override
     protected void init(Bundle savedInstanceState) {
         super.init(savedInstanceState);
 
-        locationDialog = new LocationDialog(this);
-        locationDialog.setCancelable(false);
-        locationDialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
-            @Override
-            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-                if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
-                    locationDialog.dismissCurrentDialog();
-                    finish();
-                }
-                return false;
-            }
-        });
+        initLocationDislog();
+
+        initGPS();
+
+        checkLocationPermissonNew();    //检查定位权限
 
         Float level = getBatteryLevel();
         tvRemainPower = (TextView) locationDialog.findViewById(R.id.tvRemainPower);
@@ -307,8 +363,6 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         progressDialog = new ProgressDialog(this);
         progressDialog.setCancelable(false);
 
-        initGPS();
-
         sportEntry = (SportEntry) getIntent().getSerializableExtra("sportEntry");
         interval = sportEntry.getAcquisitionInterval() * 1000;
 
@@ -316,11 +370,16 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         mapView.onCreate(savedInstanceState);// 此方法必须重写，创建地图
         initMap();
 
+        SensorService.setThresholdValue(sportEntry.getStepThreshold());
+        SensorService.setSportDetailActivity(this);
         startService(new Intent(this, SensorService.class));
-        EventManager.ins().registListener(EventTag.ON_STEP_CHANGE, eventListener);//三个参数的构造函数
-        EventManager.ins().registListener(EventTag.ON_ACCELERATION_CHANGE, eventListener);//三个参数的构造函数
+        // EventManager.ins().registListener(EventTag.ON_STEP_CHANGE, eventListener);//三个参数的构造函数
+        // EventManager.ins().registListener(EventTag.ON_ACCELERATION_CHANGE, eventListener);//三个参数的构造函数
 
-        startService(new Intent(this, LocationService.class));
+        Intent intent = new Intent(this, LocationService.class);
+        intent.putExtra("type", "跑步");
+        startService(intent);
+        //startService(new Intent(this, LocationService.class));
 
         //        DisplayMetrics displayMetrics = new DisplayMetrics();
         //        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
@@ -354,6 +413,21 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_BATTERY_LOW);
         registerReceiver(lowBatteryReceiver, filter);
+    }
+
+    private void initLocationDislog() {
+        locationDialog = new LocationDialog(this);
+        locationDialog.setCancelable(false);
+        locationDialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                    locationDialog.dismissCurrentDialog();
+                    finish();
+                }
+                return false;
+            }
+        });
     }
 
     private void initMap() {
@@ -393,15 +467,15 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         // DLOG.d(TAG, "BrightnessUtil.getScreenBrightness(getWindow())" + BrightnessUtil.getScreenBrightness(getWindow()));
         boolean needToAdjustBrightness = Float.compare(BrightnessUtil.getScreenBrightness(getWindow()), 0.1f) == 0;
 
-        if (needToAdjustBrightness) {
-            if (BrightnessUtil.isAutoAdjustBrightness(this)) {
-                BrightnessUtil.setScreenBrightness(this, brightness);
-            } else {
-                BrightnessUtil.setScreenBrightness(this, brightness);
-            }
-        }
-
-        screenKeepLightTime = 0;
+//        if (needToAdjustBrightness) {
+//            if (BrightnessUtil.isAutoAdjustBrightness(this)) {
+//                BrightnessUtil.setScreenBrightness(this, brightness);
+//            } else {
+//                BrightnessUtil.setScreenBrightness(this, brightness);
+//            }
+//        }
+//
+//        screenKeepLightTime = 0;
     }
 
     private void setupLocationStyle() {
@@ -435,15 +509,15 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
 
         //屏幕到了锁屏的时间，调暗亮度
         WindowManager.LayoutParams params = getWindow().getAttributes();
-        screenKeepLightTime += interval / 1000;
+        //screenKeepLightTime += interval / 1000;
         // DLOG.d(TAG, "params.screenBrightness: " + params.screenBrightness);
         // DLOG.d(TAG, "screenKeepLightTime:" + screenKeepLightTime);
         // DLOG.d(TAG, "screenOffTimeout:" + screenOffTimeout);
-        if (screenOffTimeout <= screenKeepLightTime && Float.compare(params.screenBrightness, 0.1f) != 0) {
-            params.screenBrightness = (float) 0.1;
-            getWindow().setAttributes(params);
-            DLOG.d(TAG, "onMyLocationChange turn down light");
-        }
+//        if (screenOffTimeout <= screenKeepLightTime && Float.compare(params.screenBrightness, 0.1f) != 0) {
+//            params.screenBrightness = (float) 0.1;
+//            getWindow().setAttributes(params);
+//            DLOG.d(TAG, "onMyLocationChange turn down light");
+//        }
 
         DLOG.d(TAG, "locationType:" + locationType);
         if (location != null) {
@@ -455,6 +529,9 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
             } else {
                 newLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                 DLOG.d(TAG, "newLatLng: " + newLatLng);
+                DLOG.d(TAG, "定位成功");
+                // locationDialog.dismissCurrentDialog();
+
                 // 判断第一次，第一次会提示
                 if (lastLatLng == null) {
                     String errText = "定位成功";
@@ -462,7 +539,8 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                     firstLocationType = locationType;
                     llLacationHint.setVisibility(View.GONE);
                     Toast.makeText(this, errText, Toast.LENGTH_SHORT).show();
-                    locationDialog.dismissCurrentDialog();
+                    handler.postDelayed(runnable, WARM_UP_TIME);
+                    //locationDialog.dismissCurrentDialog();
 
                     // 待删除
                     //aMap.moveCamera(CameraUpdateFactory.zoomTo(zoomLevel));
@@ -475,15 +553,23 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                     btStart.setVisibility(View.VISIBLE);
                 }
             }
+
+            if (SensorService.stepCounterEnabled) {
+                currentSteps = stepCounter;
+            } else {
+                currentSteps = stepCountCal;
+            }
+
             if (state == STATE_STARTED) {
                 String msg = location.toString();
-                //                DLOG.writeToInternalFile(msg);
+                //   DLOG.writeToInternalFile(msg);
 
                 float batteryLevel = getBatteryLevel();
                 DLOG.d(TAG, "lastLatLng: " + lastLatLng);
                 float distanceInterval = AMapUtils.calculateLineDistance(newLatLng, lastLatLng);
 
                 // 如果采样间隔之间，没有步数的变化，stepsInterval就是零！ 会报 Infinity or NaN: Infinity 错误的！
+                // int stepsInterval = stepCounter - lastSteps;
                 int stepsInterval = currentSteps - lastSteps;
                 BigDecimal bdDividend;
                 BigDecimal bdDevisor;
@@ -498,48 +584,72 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                     bdDividend = new BigDecimal(stepsInterval);
                     bdDevisor = new BigDecimal(sportEntry.getAcquisitionInterval());
                     stepPerSecond = bdDividend.divide(bdDevisor, 2, RoundingMode.HALF_UP).doubleValue();
-                    //                    try {
-                    //                        //                        fos = openFileOutput("testMode", MODE_PRIVATE);
-                    //                        fos.write(((++counter) + ">>>" + s1 + s + "\n").getBytes());
-                    //                    } catch (FileNotFoundException e) {
-                    //                        e.printStackTrace();
-                    //                    } catch (IOException e) {
-                    //                        e.printStackTrace();
-                    //                    } finally {
-                    //
-                    //                    }
                 }
 
                 // toastText = "绘制曲线，上一次坐标： " + lastLatLng + "， 新坐标：" + newLatLng
-                //         + "， 本次移动距离： " + distanceInterval + "， 当前步数： " + currentSteps +
+                //         + "， 本次移动距离： " + distanceInterval + "， 当前步数： " + stepCounter +
                 //         "， 当前电量: " + batteryLevel + "%" + "locationType: " + locationType;
                 // Toast.makeText(this, toastText, Toast.LENGTH_LONG).show();
 
-                if (distanceInterval / sportEntry.getAcquisitionInterval() > speedLimitation) {
-                    //位置漂移
-                    //return;
-                    toastText = "异常移动，每秒位移：" + distanceInterval / sportEntry.getAcquisitionInterval();
-                    Toast.makeText(this, toastText, Toast.LENGTH_LONG).show();
-                    isNormal = false;
-                    drawLine(lastLatLng, newLatLng, isNormal);
-                    // currentDistance += distanceInterval;
+                if (!lastLatLng.equals(newLatLng)) {
+                    // 前后定位点位置不同
+                    if (acquisitionTimes == 1) {
+                        if (distanceInterval / sportEntry.getAcquisitionInterval() > speedLimitation) {
+                            toastText = "异常移动，每秒位移：" + distanceInterval / sportEntry.getAcquisitionInterval();
+                            Toast.makeText(this, toastText, Toast.LENGTH_LONG).show();
+                            isNormal = false;
+                            drawLine(lastLatLng, newLatLng, isNormal);
+                            // currentDistance += distanceInterval;
+                        } else {
+                            isNormal = true;
+                            drawLine(lastLatLng, newLatLng, isNormal);
+                            currentDistance += distanceInterval;
+
+                            if (currentDistance > sportEntry.getQualifiedDistance() && targetFinishedTime == 0) {
+                                targetFinishedTime = elapseTime;
+                            }
+
+                            tvCurrentDistance.setText(String.valueOf(currentDistance) + " ");
+                            bdDividend = new BigDecimal(currentDistance);
+                            bdDevisor = new BigDecimal(elapseTime);
+                            BigDecimal bdResult = bdDividend.divide(bdDevisor, SPEED_SCALE, BigDecimal.ROUND_HALF_UP);
+                            // 解决速度过大
+                            if (bdResult.compareTo(new BigDecimal(10)) < 0) {
+                                tvAverSpeed.setText(bdResult.toString() + " ");
+                            }
+                        }
+                    } else {
+                        // 累加采样间隔时间
+                        if (distanceInterval / (acquisitionTimes * sportEntry.getAcquisitionInterval()) > speedLimitation) {
+                            toastText = "异常移动，每秒位移：" + distanceInterval / sportEntry.getAcquisitionInterval();
+                            Toast.makeText(this, toastText, Toast.LENGTH_LONG).show();
+                            isNormal = false;
+                            drawLine(lastLatLng, newLatLng, isNormal);
+                            // currentDistance += distanceInterval;
+                        } else {
+                            isNormal = true;
+                            drawLine(lastLatLng, newLatLng, isNormal);
+                            currentDistance += distanceInterval;
+
+                            if (currentDistance > sportEntry.getQualifiedDistance() && targetFinishedTime == 0) {
+                                targetFinishedTime = elapseTime;
+                            }
+
+                            tvCurrentDistance.setText(String.valueOf(currentDistance) + " ");
+                            bdDividend = new BigDecimal(currentDistance);
+                            bdDevisor = new BigDecimal(elapseTime);
+                            BigDecimal bdResult = bdDividend.divide(bdDevisor, SPEED_SCALE, BigDecimal.ROUND_HALF_UP);
+                            // 解决速度过大
+                            if (bdResult.compareTo(new BigDecimal(10)) < 0) {
+                                tvAverSpeed.setText(bdResult.toString() + " ");
+                            }
+                        }
+                        acquisitionTimes = 1;
+                    }
                 } else {
-                    isNormal = true;
-                    drawLine(lastLatLng, newLatLng, isNormal);
-                    currentDistance += distanceInterval;
-
-                    if (currentDistance > sportEntry.getQualifiedDistance() && targetFinishedTime == 0) {
-                        targetFinishedTime = elapseTime;
-                    }
-
-                    tvCurrentDistance.setText(String.valueOf(currentDistance) + " ");
-                    bdDividend = new BigDecimal(currentDistance);
-                    bdDevisor = new BigDecimal(elapseTime);
-                    BigDecimal bdResult = bdDividend.divide(bdDevisor, SPEED_SCALE, BigDecimal.ROUND_HALF_UP);
-                    // 解决速度过大
-                    if (bdResult.compareTo(new BigDecimal(10)) < 0) {
-                        tvAverSpeed.setText(bdResult.toString() + " ");
-                    }
+                    // 两次坐标点相同，记录次数（初始值为1）
+                    DLOG.d(TAG, "两个点一样： newLatLng：" + newLatLng + "，lastLatLng：" + lastLatLng);
+                    acquisitionTimes++;
                 }
 
                 // 提交到服务器
@@ -562,6 +672,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                         });
             }
 
+            // lastSteps = stepCounter;
             lastSteps = currentSteps;
             lastLatLng = newLatLng;
             DLOG.d(TAG, toastText);
@@ -594,22 +705,22 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     @Override
     public void initData() {
 
-        autoAdjustBrightness = BrightnessUtil.isAutoAdjustBrightness(context);
-        // DLOG.d(TAG, "autoAdjustBrightness:" + autoAdjustBrightness);
-        if (autoAdjustBrightness) {
-            brightness = BrightnessUtil.getScreenBrightness(this);
-            BrightnessUtil.stopAutoAdjustBrightness(context);
-            // DLOG.d(TAG, "brightness:" + brightness);
-        } else {
-            brightness = BrightnessUtil.getScreenBrightness(this);
-            // DLOG.d(TAG, "brightness:" + brightness);
-        }
+//        autoAdjustBrightness = BrightnessUtil.isAutoAdjustBrightness(context);
+//        // DLOG.d(TAG, "autoAdjustBrightness:" + autoAdjustBrightness);
+//        if (autoAdjustBrightness) {
+//            brightness = BrightnessUtil.getScreenBrightness(this);
+//            BrightnessUtil.stopAutoAdjustBrightness(context);
+//            // DLOG.d(TAG, "brightness:" + brightness);
+//        } else {
+//            brightness = BrightnessUtil.getScreenBrightness(this);
+//            // DLOG.d(TAG, "brightness:" + brightness);
+//        }
 
         float batteryLevel = getBatteryLevel();
         BigDecimal bd = new BigDecimal(Float.toString(batteryLevel));
         Toast.makeText(this, "当前电量： " + bd.toBigInteger() + "%， 请及时充电，保持电量充足", Toast.LENGTH_LONG).show();
-        screenOffTimeout = android.provider.Settings.System.getInt(getContentResolver(),
-                Settings.System.SCREEN_OFF_TIMEOUT, 0) / 1000;
+//        screenOffTimeout = android.provider.Settings.System.getInt(getContentResolver(),
+//                Settings.System.SCREEN_OFF_TIMEOUT, 0) / 1000;
 
         if (!TextUtils.isEmpty(sportEntry.getName())) {
             tvSportName.setText(sportEntry.getName());
@@ -637,7 +748,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         //        tvCurrentStep.setText("0 步");
         tvAverSpeed.setText("0.00 ");
         initSteps = 0;
-        currentSteps = 0;
+        stepCounter = 0;
         pauseStateSteps = 0;
         pauseStateCalcSteps = 0;
         currentDistance = 0;
@@ -649,8 +760,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         } else {// PackageManager.PERMISSION_DENIED
             UserManager.instance().cleanCache();
         }
-
-
+        
         elapseTimeRunnable = new Runnable() {
             public void run() {
                 // If you need update UI, simply do this:
@@ -682,7 +792,6 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                     if (state == STATE_STARTED) {
                         state = STATE_END;
                         stopTimer();
-
                         //做保护
                         if (elapseTime != 0) {
                             BigDecimal bd = MathUtil.bigDecimalDivide(Double.toString(currentDistance),
@@ -695,6 +804,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
 
                         tvParticipantNum.setVisibility(View.GONE);
 
+                        progressDialog.show();
                         runningActivitiesEnd(targetFinishedTime);
 
                         myBinder.stopLocationInService();
@@ -735,9 +845,16 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     private void drawLine(LatLng oldData, LatLng newData, boolean isNormal) {
         // 绘制曲线
         if (isNormal) {
-            aMap.addPolyline((new PolylineOptions())
-                    .add(oldData, newData)
-                    .geodesic(true).color(Color.GREEN));
+            // if (!isDrawYellow) {
+                aMap.addPolyline((new PolylineOptions())
+                        .add(oldData, newData)
+                        .geodesic(true).color(Color.GREEN));
+            // } else {
+            //     isDrawYellow = false;
+            //     aMap.addPolyline((new PolylineOptions())
+            //             .add(oldData, newData)
+            //             .geodesic(true).color(Color.YELLOW));
+            // }
         } else {
             aMap.addPolyline((new PolylineOptions())
                     .add(oldData, newData)
@@ -759,6 +876,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        DLOG.d(TAG, "requestCode:" + requestCode);
         switch (requestCode) {
             case REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -766,40 +884,149 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                 }
                 break;
             case REQUEST_PERMISSION_WRITE_FINE_LOCATION:
-                String permission = Manifest.permission.ACCESS_FINE_LOCATION;
-                String op = AppOpsManagerCompat.permissionToOp(permission);
-                int result = AppOpsManagerCompat.noteProxyOp(context, op, context.getPackageName());
-                if (result == AppOpsManagerCompat.MODE_IGNORED
-                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    DLOG.d("onRequestPermissionsResult", "onRequestPermissionsResult");
-                    Toast.makeText(this,
-                            getString(R.string.manual_open_permission_hint),
-                            Toast.LENGTH_SHORT).show();
+                //                String permission = Manifest.permission.ACCESS_FINE_LOCATION;
+                //                String op = AppOpsManagerCompat.permissionToOp(permission);
+                //                int result = AppOpsManagerCompat.noteProxyOp(context, op, context.getPackageName());
+                //                if (result == AppOpsManagerCompat.MODE_IGNORED
+                //                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                //                    DLOG.d("onRequestPermissionsResult", "onRequestPermissionsResult");
+                //                    Toast.makeText(this,
+                //                            getString(R.string.manual_open_permission_hint),
+                //                            Toast.LENGTH_SHORT).show();
+                //                }
+                DLOG.d(TAG, "grantResults.length:" + grantResults.length);
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //Toast.makeText(SportDetailActivity.this, "您已授权~", Toast.LENGTH_SHORT).show();
+
+                } else {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(SportDetailActivity.this,
+                            Manifest.permission.ACCESS_FINE_LOCATION)) {
+                        Toast.makeText(SportDetailActivity.this, "必须要授权才能进行运动哦~", Toast.LENGTH_SHORT).show();
+                        finish();
+                    } else {
+                        showPermissionDialog();
+                    }
                 }
                 break;
         }
     }
 
-    public boolean checkLocationPermission() {
-        String permission = Manifest.permission.ACCESS_FINE_LOCATION;
-        String op = AppOpsManagerCompat.permissionToOp(permission);
-        int result = AppOpsManagerCompat.noteProxyOp(context, op, context.getPackageName());
-        if (result == AppOpsManagerCompat.MODE_IGNORED
-                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            DLOG.d(TAG, "没有定位权限");
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)) {
-                Toast.makeText(this,
-                        getString(R.string.manual_open_permission_hint),
-                        Toast.LENGTH_SHORT).show();
-            } else {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        REQUEST_PERMISSION_WRITE_FINE_LOCATION);
+    public void showPermissionDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("重要提示")
+                .setMessage("请授予应用定位权限，应用才可以正常工作~")
+                .setPositiveButton("去授权", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //引导用户至设置页手动授权
+                        Toast.makeText(SportDetailActivity.this, "请授予应用定位权限~", Toast.LENGTH_SHORT).show();
+                        Intent intent1 = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        Uri uri = Uri.fromParts("package", getApplicationContext().getPackageName(), null);
+                        intent1.setData(uri);
+                        startActivity(intent1);
+                        finish();
+                    }
+                })
+                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //引导用户手动授权，权限请求失败
+                        Toast.makeText(SportDetailActivity.this, "必须要授权才能进行运动哦~", Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
+                }).setCancelable(false).show();
+    }
+
+    public void checkLocationPermissonNew() {
+        if (ContextCompat.checkSelfPermission(SportDetailActivity.this,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(SportDetailActivity.this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQUEST_PERMISSION_WRITE_FINE_LOCATION);
+            DLOG.d(TAG, "没有授予");
+        } else {
+            DLOG.d(TAG, "授予了");
+            // 小米手机5.0，无法正确获得是否授权
+            if (SystemUtil.getRomType().equals(SystemUtil.SYS_MIUI)) {
+                String permission = Manifest.permission.ACCESS_FINE_LOCATION;
+                String op = AppOpsManagerCompat.permissionToOp(permission);
+                int result = AppOpsManagerCompat.noteProxyOp(context, op, context.getPackageName());
+                DLOG.d(TAG, "result:" + result);
+                if (result == AppOpsManagerCompat.MODE_IGNORED) {
+                    DLOG.d(TAG, "没有定位权限");
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
+                            Manifest.permission.ACCESS_FINE_LOCATION)) {
+                        if (!testAppops()) {
+                            handler.postDelayed(runnable, WARM_UP_TIME);
+                            showPermissionDialog();
+                        }
+                    } else {
+                        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                REQUEST_PERMISSION_WRITE_FINE_LOCATION);
+                    }
+                } else {
+                    // 有权限或者默认。
+                    DLOG.d(TAG, "ACCESS_FINE_LOCATION was GRANTED!");
+                }
             }
+        }
+    }
+
+    /**
+     * checkOp：小米手机2 5.0，授权返回0，拒绝返回1
+     *
+     * @return
+     */
+    public boolean testAppops() {
+        AppOpsManager appOpsManager = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            int checkOp = appOpsManager.checkOp(AppOpsManager.OPSTR_FINE_LOCATION, Binder.getCallingUid(), getPackageName());
+            DLOG.d(TAG, "checkOp:" + checkOp);
+            if (checkOp == AppOpsManager.MODE_IGNORED) {
+                DLOG.d(TAG, "权限被拒绝了");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean checkLocationPermission() {
+
+        DLOG.d(TAG + "SystemRom: ", SystemUtil.getRomType());
+        // 小米手机5.0权限
+        if (SystemUtil.getRomType().equals(SystemUtil.SYS_MIUI)) {
+            String permission = Manifest.permission.ACCESS_FINE_LOCATION;
+            String op = AppOpsManagerCompat.permissionToOp(permission);
+            int result = AppOpsManagerCompat.noteProxyOp(context, op, context.getPackageName());
+            if (result == AppOpsManagerCompat.MODE_IGNORED
+                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                DLOG.d(TAG, "没有定位权限");
+                if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    Toast.makeText(this,
+                            getString(R.string.manual_open_permission_hint),
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                            REQUEST_PERMISSION_WRITE_FINE_LOCATION);
+                }
+                return false;
+            } else {
+                // 有权限或者默认。
+                DLOG.d(TAG, "ACCESS_FINE_LOCATION was GRANTED!");
+                return true;
+            }
+        }
+        // 判断定位服务开关
+        if (!locationManager
+                .isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
+            buildLocationServiceDialog();
             return false;
         } else {
-            // 有权限或者默认。
-            DLOG.d(TAG, "ACCESS_FINE_LOCATION was GRANTED!");
             return true;
         }
     }
@@ -840,6 +1067,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                     DLOG.d(TAG, "sportEntry.getId():" + sportEntry.getId());
                     startTime = System.currentTimeMillis();
                     stepCountCal = 0;
+                    stepCounter = 0;
                     ServerInterface.instance().runningActivitiesStart(TAG, sportEntry.getId(), student.getId(), startTime, new JsonResponseCallback() {
                         @Override
                         public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
@@ -847,6 +1075,12 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                                 try {
                                     sportRecordId = json.getInt("id");
                                     DLOG.d(TAG, "sportRecordId:" + sportRecordId);
+
+                                    if (SensorService.stepCounterEnabled) {
+                                        currentSteps = stepCounter;
+                                    } else {
+                                        currentSteps = stepCountCal;
+                                    }
 
                                     //第一次向服务器提交数据,默认第一次是正常的数据
                                     ServerInterface.instance().runningActivityData(TAG, sportRecordId, currentSteps, stepCountCal, currentDistance,
@@ -907,6 +1141,9 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                 } else if (state == STATE_END) {//运动结束时，查看锻炼结果
                     finish();
                     SportResultActivity.start(this, historySportEntry);
+                } else if (state == STATE_NETWORK_ERROR) {
+                    finish();
+                    onBackPressed();
                 }
                 break;
             case R.id.ivLocation:
@@ -921,6 +1158,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                 aMap.moveCamera(cu);
                 break;
             case R.id.ivShowSportInfo:
+                DLOG.d(TAG, "ivShowSportInfo");
                 // 指南针的位置要变化，UiSettings 中寻找方法
                 if (null == showAnimation) {
                     showAnimation = AnimationUtils.loadAnimation(this, R.anim.show_anim);
@@ -946,6 +1184,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                 rlAnimView.startAnimation(showAnimation);
                 break;
             case R.id.ivHideSportInfo:
+                DLOG.d(TAG, "ivHideSportInfo");
                 if (null == hideAnimation) {
                     hideAnimation = AnimationUtils.loadAnimation(this, R.anim.hide_anim);
                 }
@@ -979,6 +1218,13 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         //必须先初始化。
         //        SQLite.init(context, RunningSportsCallback.getInstance());
         DLOG.d(TAG, "runningActivitiesEnd");
+
+        if (SensorService.stepCounterEnabled) {
+            currentSteps = stepCounter;
+        } else {
+            currentSteps = stepCountCal;
+        }
+
         //提交本次运动数据，更新UI
         ServerInterface.instance().runningActivitiesEnd(
                 TAG, sportRecordId, currentDistance, currentSteps, elapseTime, targetFinishedTime, new JsonResponseCallback() {
@@ -1003,6 +1249,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                                 historySportEntry.setKcalConsumed(json.getInt("kcalConsumed"));
                                 historySportEntry.setQualified(json.getBoolean("qualified"));
                                 historySportEntry.setValid(json.getBoolean("isValid"));
+                                historySportEntry.setVerified(json.getBoolean("isVerified"));
                                 historySportEntry.setQualifiedDistance(json.getInt("qualifiedDistance"));
                                 historySportEntry.setQualifiedCostTime(json.getInt("qualifiedCostTime"));
                                 historySportEntry.setMinCostTime(json.getLong("minCostTime"));
@@ -1011,6 +1258,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                                 historySportEntry.setEndedAt(json.getLong("endedAt"));
                                 //                                historySportEntry.setEndedBy(json.getBoolean("endedBy"));
                                 historySportEntry.setType(AppConstant.RUNNING_TYPE);
+                                progressDialog.dismissCurrentDialog();
                             } catch (org.json.JSONException e) {
                                 e.printStackTrace();
                                 Toast.makeText(SportDetailActivity.this, COMMIT_FALIED_MSG, Toast.LENGTH_SHORT).show();
@@ -1022,33 +1270,99 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                             btStart.setVisibility(View.VISIBLE);
                             btStart.setText("查看锻炼结果");
 
-                            if (historySportEntry.isValid()) {
-                                if (historySportEntry.isQualified()) {
-                                    tvResult.setText(R.string.qualified);
-                                    tvResult.setTextColor(Color.GREEN);
-                                } else {
-                                    tvResult.setText(R.string.notQualified);
-                                    tvResult.setTextColor(Color.RED);
-                                }
+                            //非正常结束
+                            if (historySportEntry.getEndedAt() == 0) {
+                                tvResult.setText("未结束");
+                                tvResult.setTextColor(Color.parseColor("#FF9800"));
+                                ivHelp.setVisibility(View.VISIBLE);
                             } else {
-                                tvResult.setText(R.string.abnormalData);
-                                tvResult.setTextColor(Color.RED);
+                                //是否达标
+                                if (historySportEntry.isQualified()) {
+                                    //是否审核
+                                    if (historySportEntry.isVerified()) {
+                                        //是否有效
+                                        if (historySportEntry.isValid()) {
+                                            tvResult.setText("达标");
+                                            tvResult.setTextColor(Color.parseColor("#4CAF50"));
+                                            ivFinished.setVisibility(View.VISIBLE);
+                                        } else {
+                                            tvResult.setText("审核未通过");
+                                            tvResult.setTextColor(Color.RED);
+                                            ivHelp.setVisibility(View.VISIBLE);
+                                        }
+                                    } else {
+                                        tvResult.setText("达标待审核");
+                                        tvResult.setTextColor(Color.parseColor("#4CAF50"));
+                                        ivHelp.setVisibility(View.VISIBLE);
+                                    }
+                                } else {
+                                    tvResult.setText("未达标");
+                                    tvResult.setTextColor(Color.parseColor("#FF9800"));
+                                    ivHelp.setVisibility(View.VISIBLE);
+                                }
                             }
 
                             tvResult.setVisibility(View.VISIBLE);
+                            llResult.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    WebViewActivity.loadUrl(SportDetailActivity.this, "http://www.guangyangyundong.com:86/#/help", "帮助中心");
+                                    overridePendingTransition(R.anim.right_in, R.anim.left_out);
+                                }
+                            });
+
                             rlCurConsumeEnergy.setVisibility(View.VISIBLE);
                             tvCurConsumeEnergy.setText(getString(R.string.curConsumeEnergyTemp, String.valueOf(historySportEntry.getKcalConsumed())));
                             return true;
 
                         } else {
-                            Toast.makeText(SportDetailActivity.this, COMMIT_FALIED_MSG, Toast.LENGTH_SHORT).show();
-                            DLOG.d(TAG, COMMIT_FALIED_MSG);
-                            // 由于网络原因而使得数据没有正确提交，historySportEntry 是为空的！不应该显示"查看锻炼结果"按钮
-                            btStart.setVisibility(View.GONE);
-                            return false;
+                            // 判断网络提交异常次数 <= 3次，提示用户再次提交
+                            if (commitTimes++ < 3) {
+                                showRetryDialog(context, COMMIT_AGAIN_MSG);
+                                progressDialog.dismissCurrentDialog();
+                                return false;
+                            } else {
+                                state = STATE_NETWORK_ERROR;
+                                btStart.setVisibility(View.VISIBLE);
+                                btStart.setText("返回首页");
+                                progressDialog.dismissCurrentDialog();
+                                Toast.makeText(context, COMMIT_FALIED_MSG, Toast.LENGTH_SHORT).show();
+                                return false;
+                            }
                         }
                     }
                 });
+    }
+
+    public void showRetryDialog(Context context, String message) {
+        View view = LayoutInflater.from(context).inflate(R.layout.dialog_message, null);
+        TextView confirm;    //确定按钮
+        final TextView content;    //内容
+        confirm = (TextView) view.findViewById(R.id.dialog_btn_confirm);
+        confirm.setText("重试");
+        content = (TextView) view.findViewById(R.id.dialog_txt_content);
+        content.setText(message);
+        final Dialog dialog = new Dialog(context);
+        dialog.setContentView(view);
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        confirm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runningActivitiesEnd(targetFinishedTime);
+                progressDialog.show();
+                dialog.dismiss();
+            }
+        });
+        dialog.show();
+        DisplayMetrics dm = context.getResources().getDisplayMetrics();
+        int displayWidth = dm.widthPixels;
+        int displayHeight = dm.heightPixels;
+        android.view.WindowManager.LayoutParams p = dialog.getWindow().getAttributes();  //获取对话框当前的参数值
+        p.width = (int) (displayWidth * 0.55);    //宽度设置为屏幕的0.5
+        p.height = (int) (displayHeight * 0.28);    //宽度设置为屏幕的0.5
+        dialog.setCanceledOnTouchOutside(false);// 设置点击屏幕Dialog不消失
+        dialog.getWindow().setAttributes(p);     //设置生效
     }
 
     @Override
@@ -1082,6 +1396,8 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         tvTargetSpeed = (TextView) findViewById(R.id.tvTargetValue);
         tvPause = (TextView) findViewById(R.id.tvPause);
         ivLocation = (ImageView) findViewById(R.id.ivLocation);
+        ivHelp = (ImageView) findViewById(R.id.ivHelp);
+        ivFinished = (ImageView) findViewById(R.id.ivFinished);
         slideUnlockView = (SlideUnlockView) findViewById(R.id.slideUnlockView);
         rlBottom = (RelativeLayout) findViewById(R.id.rlBottom);
         rlRoot = (RelativeLayout) findViewById(R.id.rlRoot);
@@ -1094,6 +1410,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         btContinue = (Button) findViewById(R.id.btContinue);
         btStop = (Button) findViewById(R.id.btStop);
         tvResult = (TextView) findViewById(R.id.tvResult);
+        llResult = (LinearLayout) findViewById(R.id.llResult);
         //        tvStepTitle = (TextView) findViewById(R.id.tvStepTitle);
         //        tvCurrentStep = (TextView) findViewById(R.id.tvCurrentStep);
         llTargetContainer = (LinearLayout) findViewById(R.id.llTargetContainer);
@@ -1114,6 +1431,41 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         ivHideSportInfo.setOnClickListener(this);
     }
 
+    public void onStepChange(int steps) {
+        DLOG.d(TAG, "系统自带计步器：" + steps);
+        if (state == STATE_STARTED) {
+            // DLOG.d(TAG, "state: " + state);
+            if (initSteps == 0) {
+                initSteps = steps;
+            } else {
+                stepCounter = steps - initSteps - pauseStateSteps;
+                // tvCurrentStep.setText(String.valueOf(stepCounter) + "步");
+            }
+        } else {
+            if (initSteps != 0) {
+                pauseStateSteps = steps - initSteps - stepCounter;
+            }
+        }
+    }
+
+    public void onStepCalcChange(int calcSteps) {
+        DLOG.d(TAG, "自定义计步器：" + calcSteps);
+        if (state == STATE_STARTED) {
+            // DLOG.d(TAG, "state: " + state);
+            if (initCalcSteps == 0) {
+                initCalcSteps = calcSteps;
+            } else {
+                stepCountCal = calcSteps - initCalcSteps - pauseStateCalcSteps;
+                // tvCurrentStep.setText(String.valueOf(stepCounter) + "步");
+            }
+        } else {
+            if (initCalcSteps != 0) {
+                pauseStateCalcSteps = calcSteps - initCalcSteps - stepCountCal;
+            }
+        }
+    }
+
+    /*
     EventListener eventListener = new EventListener() {
         @Override
         public void handleMessage(int what, int arg1, int arg2, Object dataobj) {
@@ -1126,12 +1478,12 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                         if (initSteps == 0) {
                             initSteps = steps;
                         } else {
-                            currentSteps = steps - initSteps - pauseStateSteps;
-                            // tvCurrentStep.setText(String.valueOf(currentSteps) + "步");
+                            stepCounter = steps - initSteps - pauseStateSteps;
+                            // tvCurrentStep.setText(String.valueOf(stepCounter) + "步");
                         }
                     } else {
                         if (initSteps != 0) {
-                            pauseStateSteps = steps - initSteps - currentSteps;
+                            pauseStateSteps = steps - initSteps - stepCounter;
                         }
                     }
                     break;
@@ -1144,7 +1496,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                             initCalcSteps = calcSteps;
                         } else {
                             stepCountCal = calcSteps - initCalcSteps - pauseStateCalcSteps;
-                            // tvCurrentStep.setText(String.valueOf(currentSteps) + "步");
+                            // tvCurrentStep.setText(String.valueOf(stepCounter) + "步");
                         }
                     } else {
                         if (initCalcSteps != 0) {
@@ -1155,12 +1507,12 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                     //     if (initSteps == 0) {
                     //         initSteps = stepCountCal;
                     //     } else {
-                    //         currentSteps = stepCountCal - initSteps - pauseStateSteps;
-                    //         // tvCurrentStep.setText(String.valueOf(currentSteps) + "步");
+                    //         stepCounter = stepCountCal - initSteps - pauseStateSteps;
+                    //         // tvCurrentStep.setText(String.valueOf(stepCounter) + "步");
                     //     }
                     // } else {
                     //     if (initSteps != 0) {
-                    //         pauseStateSteps = stepCountCal - initSteps - currentSteps;
+                    //         pauseStateSteps = stepCountCal - initSteps - stepCounter;
                     //     }
                     // }
                     break;
@@ -1168,7 +1520,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
             }
         }
     };
-
+    */
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -1195,21 +1547,28 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     @Override
     protected void onPause() {
         super.onPause();
-        mapView.onPause();
+        if (mapView != null) {
+            mapView.onPause();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mapView.onDestroy();
-
-        if (autoAdjustBrightness) {
-            BrightnessUtil.startAutoAdjustBrightness(this);
+        if (mapView != null) {
+            mapView.onDestroy();
         }
 
+//        if (autoAdjustBrightness) {
+//            BrightnessUtil.startAutoAdjustBrightness(this);
+//        }
+
+        if (locationDialog != null && locationDialog.isShowing()) {
+            locationDialog.dismissCurrentDialog();
+        }
         //页面销毁移除未完成的网络请求
         OkHttpUtils.getInstance().cancelTag(TAG);
-        EventManager.ins().removeListener(EventTag.ON_STEP_CHANGE, eventListener);
+        // EventManager.ins().removeListener(EventTag.ON_STEP_CHANGE, eventListener);
 
         if (myBinder != null) {
             unbindService(connection);
@@ -1248,4 +1607,5 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
             }
         }
     };
+
 }

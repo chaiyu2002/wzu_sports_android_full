@@ -8,7 +8,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.application.library.base.BaseFragment;
 import com.application.library.log.DLOG;
 import com.application.library.net.JsonResponseCallback;
 import com.application.library.widget.EmptyLayout;
@@ -30,6 +29,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.tim.app.constant.AppConstant.student;
+
 /**
  * 排行榜数据
  */
@@ -49,7 +50,7 @@ public class RankingDataFragment extends BaseFragment implements View.OnClickLis
     private RankingDataHeadView headView;
 
     int type;
-    private int universityId = 1;
+    // private int universityId = 1;
     private int pageNoEnergy = 1;
     private int pageSizeEnergy = 10; // value don't  less than 3
     private int pageCountEnergy = -1;
@@ -116,7 +117,7 @@ public class RankingDataFragment extends BaseFragment implements View.OnClickLis
 
     private void initData() {
         if (type == AppConstant.TYPE_COST_ENERGY) {
-            ServerInterface.instance().queryCollegeSportsRankingData(universityId, pageSizeEnergy, pageNoEnergy, type, new JsonResponseCallback() {
+            ServerInterface.instance().queryCollegeSportsRankingData(student.getUniversityId(), pageSizeEnergy, pageNoEnergy, type, new JsonResponseCallback() {
                 @Override
                 public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                     if (errCode == 0) {
@@ -178,7 +179,7 @@ public class RankingDataFragment extends BaseFragment implements View.OnClickLis
 
             });
         } else {
-            ServerInterface.instance().queryCollegeSportsRankingData(universityId, pageSizeTime, pageNoTime, type, new JsonResponseCallback() {
+            ServerInterface.instance().queryCollegeSportsRankingData(student.getUniversityId(), pageSizeTime, pageNoTime, type, new JsonResponseCallback() {
                 @Override
                 public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                     if (errCode == 0) {
@@ -288,7 +289,7 @@ public class RankingDataFragment extends BaseFragment implements View.OnClickLis
         DLOG.d(TAG, "pageNoTime:" + pageNoTime);
         DLOG.d(TAG, "pageCountEnergy:" + pageCountEnergy);
         if (type == AppConstant.TYPE_COST_ENERGY) {
-            ServerInterface.instance().queryCollegeSportsRankingData(universityId, pageSizeEnergy, pageNoEnergy, type, new JsonResponseCallback() {
+            ServerInterface.instance().queryCollegeSportsRankingData(student.getUniversityId(), pageSizeEnergy, pageNoEnergy, type, new JsonResponseCallback() {
                 @Override
                 public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                     if (errCode == 0) {
@@ -325,7 +326,7 @@ public class RankingDataFragment extends BaseFragment implements View.OnClickLis
             }
             pageNoEnergy++;
         } else {
-            ServerInterface.instance().queryCollegeSportsRankingData(universityId, pageSizeTime, pageNoTime, type, new JsonResponseCallback() {
+            ServerInterface.instance().queryCollegeSportsRankingData(student.getUniversityId(), pageSizeTime, pageNoTime, type, new JsonResponseCallback() {
                 @Override
                 public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                     if (errCode == 0) {

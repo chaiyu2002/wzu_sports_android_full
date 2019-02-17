@@ -24,7 +24,6 @@ import com.application.library.log.DLOG;
 import com.application.library.net.JsonResponseCallback;
 import com.application.library.runtime.event.EventManager;
 import com.application.library.util.NetUtils;
-import com.application.library.util.StringUtil;
 import com.lzy.okhttputils.OkHttpUtils;
 import com.lzy.okhttputils.model.HttpHeaders;
 import com.tim.app.R;
@@ -322,9 +321,9 @@ public class LoginActivity extends BaseActivity {
         //            tvNoErrorPrmpt.setVisibility(View.GONE);
         //        }
 
-        if (TextUtils.isEmpty(password) || !password.matches(StringUtil.ZHENGZE_PASSWORD)) {
+        if (TextUtils.isEmpty(password)/* || !password.matches(StringUtil.ZHENGZE_PASSWORD)*/) {
             tvPasswordErrorPrmpt.setVisibility(View.VISIBLE);
-            tvPasswordErrorPrmpt.setText(RT.getString(R.string.error_password));
+            tvPasswordErrorPrmpt.setText(RT.getString(R.string.error_password_noput));
             return false;
         } else {
             tvPasswordErrorPrmpt.setVisibility(View.GONE);
@@ -455,6 +454,8 @@ public class LoginActivity extends BaseActivity {
 
             value = getSharedPreferences(preferenceName, MODE_PRIVATE).getString(key, "");
             //            Log.d(TAG, "after put value: " + value);
+
+            editor.putBoolean(AppConstant.IS_FIRST_LAUNCH, true);
 
             editor.apply();
             //            Log.d(TAG, "key: " + getSharedPreferences(preferenceName, MODE_PRIVATE).getString(key, ""));

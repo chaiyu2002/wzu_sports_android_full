@@ -9,6 +9,8 @@ public class User implements Serializable {
     private static final long serialVersionUID = 6187447685293862071L;
     public static final String USER = "user";
     public static final String USER_SHARED_PREFERENCE = "user_shared_preference";
+    public static final String USER_UPDATE_PREFERENCE = "user_update_preference";
+    public static final String IGNORE_VERSION = "ignore_version";
 
     private int uid;
     private String phone;

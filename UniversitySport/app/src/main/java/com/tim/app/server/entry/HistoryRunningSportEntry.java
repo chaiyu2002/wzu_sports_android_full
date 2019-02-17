@@ -62,16 +62,4 @@ public class HistoryRunningSportEntry extends HistorySportEntry implements Seria
     public void setQualifiedDistance(int qualifiedDistance) {
         this.qualifiedDistance = qualifiedDistance;
     }
-
-    @Override
-    public String toString() {
-        return "HistoryRunningSportEntry{" +
-                ", distance=" + distance +
-                ", stepCount=" + stepCount +
-                ", speed=" + speed +
-                ", stepPerSecond=" + stepPerSecond +
-                ", distancePerStep=" + distancePerStep +
-                ", qualifiedDistance=" + qualifiedDistance +
-                '}';
-    }
 }

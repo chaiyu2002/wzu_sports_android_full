@@ -58,9 +58,33 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentRight="true"
                     android:layout_centerVertical="true"
+                    android:layout_marginRight="25dp"
+                    android:text="达标"
                     android:textColor="#00CC00"
                     android:textSize="14dp"
-                    android:visibility="gone"/>
+                    android:visibility="visible"/>
+
+                <ImageView
+                    android:id="@+id/ivHelp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/dimen_2"
+                    android:src="@drawable/ic_btn_help"
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    android:layout_centerVertical="true"
+                    android:layout_alignParentEnd="true" />
+
+                <ImageView
+                    android:id="@+id/ivFinished"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/dimen_2"
+                    android:src="@drawable/ic_btn_finished"
+                    android:layout_centerVertical="true"
+                    android:layout_alignParentEnd="true"
+                    android:visibility="gone"
+                    tools:visibility="visible"/>
 
                 <ImageView
                     android:id="@+id/ivLocation"
@@ -255,7 +279,6 @@
                 android:layout_height="0.5dp"
                 android:background="@color/colorLine"/>
 
-
             <LinearLayout
                 android:id="@+id/llTargetContainer"
                 android:layout_width="match_parent"
@@ -391,9 +414,7 @@
 
             </LinearLayout>
 
-
         </LinearLayout>
-
 
         <ImageView
             android:id="@+id/ivShowSportInfo"

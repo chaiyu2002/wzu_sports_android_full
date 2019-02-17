@@ -25,6 +25,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Binder;
 import android.os.IBinder;
 
 import com.application.library.log.DLOG;
@@ -33,6 +34,7 @@ import com.tim.app.constant.EventTag;
 import com.tim.app.sport.entry.Acceleration;
 import com.tim.app.sport.entry.Gravity;
 import com.tim.app.sport.entry.Gyroscope;
+import com.tim.app.ui.activity.SportDetailActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +50,9 @@ import java.util.List;
 public class SensorService extends Service implements SensorEventListener {
 
     private static final String TAG = "SensorService";
+    private static SportDetailActivity sportDetailActivity = null;
+
+    public static boolean stepCounterEnabled = false;
 
     private final static int NOTIFICATION_ID = 1;
     private final static long MICROSECONDS_IN_ONE_MINUTE = 60000;
@@ -94,7 +99,7 @@ public class SensorService extends Service implements SensorEventListener {
     //动态阈值需要动态的数据，这个值用于这些动态数据的阈值
     final float initialValue = (float) 1.0;
     //初始阈值
-    float thresholdValue = (float) 6.0;
+    static float thresholdValue = (float) 4.0;
     //用x、y、z轴三个维度算出的平均值
     public static float average = 0;
 
@@ -103,7 +108,7 @@ public class SensorService extends Service implements SensorEventListener {
     // Step_Detector传感器使用的当前步数
     public static int detectorStep = 0;
 
-    
+
     public Acceleration acceleration = null;
     public Gyroscope gyroscope = null;
     public Gravity gravity = null;
@@ -119,6 +124,18 @@ public class SensorService extends Service implements SensorEventListener {
 
 
     public final static String ACTION_UPDATE_NOTIFICATION = "updateNotificationState";
+
+    public static float getThresholdValue() {
+        return thresholdValue;
+    }
+
+    public static void setThresholdValue(float thresholdValue) {
+        SensorService.thresholdValue = thresholdValue;
+    }
+
+    public static void setSportDetailActivity(SportDetailActivity sportDetailActivity) {
+        SensorService.sportDetailActivity = sportDetailActivity;
+    }
 
     @Override
     public void onAccuracyChanged(final Sensor sensor, int accuracy) {
@@ -153,7 +170,7 @@ public class SensorService extends Service implements SensorEventListener {
                     } else {
                         steps = (int) event.values[0];
                         DLOG.d(TAG, "onSensorChanged: step counter: 计步 = " + steps);
-                        EventManager.ins().sendEvent(EventTag.ON_STEP_CHANGE, 0, 0, steps);
+                        sportDetailActivity.onStepChange(steps);
                     }
                     break;
 
@@ -200,7 +217,7 @@ public class SensorService extends Service implements SensorEventListener {
                     detectorStep++;
                     // saveAcceleration(event.timestamp, detectorStep);
                     DLOG.e("StepInAcceleration", "传感器计步： " + detectorStep++);
-                    EventManager.ins().sendEvent(EventTag.ON_DETECTOR_CHANGE, 0, 0, stepCountCal);
+                    // EventManager.ins().sendEvent(EventTag.ON_DETECTOR_CHANGE, 0, 0, stepCountCal);
 
                     break;
                 case Sensor.TYPE_GYROSCOPE:
@@ -275,24 +292,24 @@ public class SensorService extends Service implements SensorEventListener {
                 boolean a = timeOfNow - timeOfLastPeak >= 250;
                 boolean b = (timeOfNow - timeOfLastPeak) <= 2000;
                 boolean c = peakOfWave - valleyOfWave >= thresholdValue;
-                DLOG.d(TAG, "timeOfNow: " + timeOfNow);
-                DLOG.d(TAG, "timeOfLastPeak: " + timeOfLastPeak);
-                DLOG.d(TAG, "timeOfNow - timeOfLastPeak: " + (timeOfNow - timeOfLastPeak));
-                DLOG.d(TAG, "peakOfWave: " + peakOfWave);
-                DLOG.d(TAG, "valleyOfWave: " + valleyOfWave);
-                DLOG.d(TAG, "thresholdValue: " + thresholdValue);
-                DLOG.e(TAG, "peakOfWave - valleyOfWave: " + (peakOfWave - valleyOfWave));
-                DLOG.d(TAG, "a:" + a);
-                DLOG.d(TAG, "b:" + b);
-                DLOG.d(TAG, "c:" + c);
+                // DLOG.d(TAG, "timeOfNow: " + timeOfNow);
+                // DLOG.d(TAG, "timeOfLastPeak: " + timeOfLastPeak);
+                // DLOG.d(TAG, "timeOfNow - timeOfLastPeak: " + (timeOfNow - timeOfLastPeak));
+                // DLOG.d(TAG, "peakOfWave: " + peakOfWave);
+                // DLOG.d(TAG, "valleyOfWave: " + valleyOfWave);
+                // DLOG.d(TAG, "thresholdValue: " + thresholdValue);
+                // DLOG.e(TAG, "peakOfWave - valleyOfWave: " + (peakOfWave - valleyOfWave));
+                // DLOG.d(TAG, "a:" + a);
+                // DLOG.d(TAG, "b:" + b);
+                // DLOG.d(TAG, "c:" + c);
 
                 if (a && b && c) {
                     timeOfThisPeak = timeOfNow;
                     // 更新界面的处理，不涉及到算法
                     stepCountCal++;
                     DLOG.e(TAG, "thresholdValue:" + thresholdValue + "计步：" + stepCountCal);
-                    EventManager.ins().sendEvent(EventTag.ON_ACCELERATION_CHANGE, 0, 0, stepCountCal);
-
+                    // EventManager.ins().sendEvent(EventTag.ON_ACCELERATION_CHANGE, 0, 0, stepCountCal);
+                    sportDetailActivity.onStepCalcChange(stepCountCal);
                 }
                 if (timeOfNow - timeOfLastPeak >= 250
                         && (peakOfWave - valleyOfWave >= initialValue)) {
@@ -335,12 +352,12 @@ public class SensorService extends Service implements SensorEventListener {
 
         if (!isDirectionUp && lastStatus) {
             peakOfWave = oldValue;
-            DLOG.d(TAG, "peakOfWave:" + peakOfWave);
+            // DLOG.d(TAG, "peakOfWave:" + peakOfWave);
             return true;
             //上一次是向下，本次是向上
         } else if (!lastStatus && isDirectionUp) {
             valleyOfWave = oldValue;
-            DLOG.d(TAG, "valleyOfWave:" + valleyOfWave);
+            // DLOG.d(TAG, "valleyOfWave:" + valleyOfWave);
             return false;
         } else {
             return false;
@@ -532,23 +549,25 @@ public class SensorService extends Service implements SensorEventListener {
                     SensorManager.SENSOR_DELAY_NORMAL, (int) (5 * MICROSECONDS_IN_ONE_MINUTE));
             if (isAvailable) {
                 DLOG.v(TAG, "STEP_COUNTER传感器可以使用");
+                stepCounterEnabled = true;
             } else {
                 DLOG.v(TAG, "STEP_COUNTER传感器无法使用");
+                stepCounterEnabled = false;
             }
-        } else {
-            // DLOG.v(TAG, "STEP_COUNTER传感器无法使用");
-            Sensor accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            if (accelerometerSensor != null) {
-                isAvailable = sensorManager.registerListener(this, accelerometerSensor,
-                        SensorManager.SENSOR_DELAY_UI);
-                if (isAvailable) {
-                    DLOG.v(TAG, "STEP_COUNTER传感器无法使用, 现在开启ACCELEROMETER传感器");
-                } else {
-                    DLOG.v(TAG, "ACCELEROMETER传感器无法使用");
-                }
-            } else {
-                DLOG.v(TAG, "ACCELEROMETER传感器无法使用");
-            }
+            // } else {
+            //     DLOG.v(TAG, "手机不支持STEP_COUNTER传感器");
+            //     Sensor accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            //     if (accelerometerSensor != null) {
+            //         isAvailable = sensorManager.registerListener(this, accelerometerSensor,
+            //                 SensorManager.SENSOR_DELAY_UI);
+            //         if (isAvailable) {
+            //             DLOG.v(TAG, "ACCELEROMETER传感器可以使用");
+            //         } else {
+            //             DLOG.v(TAG, "ACCELEROMETER传感器无法使用");
+            //         }
+            //     } else {
+            //         DLOG.v(TAG, "ACCELEROMETER传感器无法使用");
+            //     }
         }
 
         // 现在暂时测试，即使有STEP_COUNTER传感器也打开加速度传感器
@@ -557,12 +576,12 @@ public class SensorService extends Service implements SensorEventListener {
             isAvailable = sensorManager.registerListener(this, accelerometerSensor,
                     SensorManager.SENSOR_DELAY_UI);
             if (isAvailable) {
-                DLOG.v(TAG, "STEP_COUNTER传感器无法使用, 现在开启ACCELEROMETER传感器");
+                DLOG.v(TAG, "ACCELEROMETER传感器已开启");
             } else {
-                DLOG.v(TAG, "ACCELEROMETER传感器无法使用");
+                DLOG.v(TAG, "ACCELEROMETER传感器无法开启");
             }
         } else {
-            DLOG.v(TAG, "ACCELEROMETER传感器无法使用");
+            DLOG.v(TAG, "没有ACCELEROMETER传感器");
         }
 
         Sensor gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
@@ -600,7 +619,5 @@ public class SensorService extends Service implements SensorEventListener {
         // } else {
         //     DLOG.v(TAG, "STEP_DETECTOR传感器无法使用");
         // }
-
-
     }
 }

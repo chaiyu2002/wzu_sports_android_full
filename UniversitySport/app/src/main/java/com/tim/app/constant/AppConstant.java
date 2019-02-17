@@ -27,6 +27,8 @@ public class AppConstant {
 
     public static final int UNIVERSITY_ID = 1;
 
+    public static final String IS_FIRST_LAUNCH = "isFirstLaunch";
+
     //    1：注册
     //    2：找回密码
     //    3：绑定手机
@@ -62,6 +64,16 @@ public class AppConstant {
     public static Student student;
 
     public static final int SPEED_SCALE = 2;
+
+    /**
+     * 历史记录筛选状态
+     */
+    public final static int STATUS_ALL = 0;
+    public final static int STATUS_QUALIFIED = 1;
+    public final static int STATUS_DISQUALIFIED = 2;
+//    public final static int STATUS_NOT_VERIFIED = 3;
+    public final static int STATUS_VERIFIED_FAILED = 4;
+//    public final static int STATUS_ABNORMAL_END = 5;
 }
 
 

@@ -49,7 +49,7 @@
                 <RelativeLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentRight="true"
+                    android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true">
 
                     <TextView
@@ -57,23 +57,59 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_centerVertical="true"
-                        android:layout_toLeftOf="@+id/llRightTitle"
+                        android:layout_toLeftOf="@+id/rlRightTitle"
                         android:text="地点调整 > "
                         android:textColor="@color/blue"
                         android:textSize="12dp"/>
 
-                    <TextView
-                        android:id="@+id/tvResult"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:textColor="#00CC00"
-                        android:textSize="14dp"
-                        android:visibility="gone"
-                        tool:text="达标"/>
                 </RelativeLayout>
 
+                <FrameLayout
+                    android:id="@+id/llMiddle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_alignParentEnd="true"
+                    >
 
+                    <LinearLayout
+                        android:id="@+id/llResult"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_marginRight="@dimen/dimen_10"
+                        tools:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tvResult"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#00CC00"
+                            android:textSize="14dp"
+                            android:visibility="gone"
+                            tools:text="已达标"
+                            tools:visibility="visible"/>
+
+                        <ImageView
+                            android:id="@+id/ivHelp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="@dimen/dimen_2"
+                            android:src="@drawable/ic_btn_help"
+                            android:visibility="gone"
+                            tools:visibility="visible"/>
+
+                        <ImageView
+                            android:id="@+id/ivFinished"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="@dimen/dimen_2"
+                            android:layout_marginRight="@dimen/dimen_2"
+                            android:src="@drawable/ic_btn_finished"
+                            android:visibility="gone"
+                            tools:visibility="visible"/>
+                    </LinearLayout>
+                </FrameLayout>
             </RelativeLayout>
 
             <View
@@ -196,7 +232,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_centerVertical="true"
-                        android:layout_toLeftOf="@+id/llRightTitle"
+                        android:layout_toLeftOf="@+id/rlRightTitle"
                         tools:text="20人正在参加"
                         android:textColor="@color/black_60"
                         android:textSize="12dp"/>

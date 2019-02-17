@@ -237,6 +237,7 @@ public class ServerInterface {
                 "    qualifiedDistance\n" +
                 "    qualifiedCostTime\n" +
                 "    imgUrl\n" +
+                "    stepThreshold\n" +
                 "  }\n" +
                 "}\n";
         query(queryStr, callback);
@@ -259,13 +260,14 @@ public class ServerInterface {
                 //                "    targetFinishedTime\n" +
                 //                "    sportDate\n" +
                 //                "    startTime\n" +
-                //                "    endedAt\n" +
+                "    endedAt\n" +
                 "    qualifiedDistance\n" +
                 "    qualifiedCostTime\n" +
                 //                "    minCostTime\n" +
                 "    kcalConsumed\n" +
                 "    qualified\n" +
                 "    isValid\n" +
+                "    isVerified\n" +
                 //                "    speed\n" +
                 //                "    stepPerSecond\n" +
                 //                "    distancePerStep\n" +
@@ -294,6 +296,9 @@ public class ServerInterface {
                 "    qualified\n" +
                 "    qualifiedCostTime\n" +
                 "    kcalConsumed\n" +
+                "    isValid\n" +
+                "    isVerified\n" +
+                "    endedAt\n" +
                 // "    areaSport {\n" +
                 // "      name\n" +
                 // "    }\n" +
@@ -357,7 +362,7 @@ public class ServerInterface {
                     "}";
         } else {
             queryStr = "{    \n" +
-                    "  university(id:1) {\n" +
+                    "  university(id:" + universityId + ") {\n" +
                     "\t\ttimeCostedRanking (pageSize:" + pageSize + " pageNumber:" + pageNo + "){\n" +
                     "      pagesCount\n" +
                     "      data{\n" +
@@ -415,12 +420,13 @@ public class ServerInterface {
                 "        sportDate\n" +
                 "        endedAt\n" +
                 "        isValid\n" +
+                "        isVerified\n" +
                 "        runningSport {\n" +
                 "          name\n" +
                 "        }\n" +
                 "      }\n" +
                 "    }\n" +
-                "    areaActivities(startDate: \"2017-06-19\", endDate: \"2017-10-08\") {\n" +
+                "    areaActivities(startDate: \"" + startDate + "\", endDate: \"" + endDate + "\") {\n" +
                 "      data {\n" +
                 "        id\n" +
                 "        areaSportId\n" +
@@ -439,6 +445,8 @@ public class ServerInterface {
                 "        costTime\n" +
                 "        kcalConsumed\n" +
                 "        qualified\n" +
+                "        isValid\n" +
+                "        isVerified\n" +
                 "        startTime\n" +
                 "        sportDate\n" +
                 "        endedAt\n" +
@@ -505,17 +513,17 @@ public class ServerInterface {
      */
     public void queryAreaSport(int universityId, ResponseCallback callback) {
         String queryStr = "{\n" +
-                " areaSports(universityId:" + universityId + "){\n" +
+                "  areaSports(universityId: " + universityId + ") {\n" +
                 "    id\n" +
                 "    name\n" +
                 "    qualifiedCostTime\n" +
                 "    acquisitionInterval\n" +
                 "    isEnabled\n" +
-                "    universityId\n" +
                 "    imgUrl\n" +
+                "    participantNum\n" +
+                "    universityId\n" +
                 "  }\n" +
-                "}\n" +
-                "\n";
+                "}\n";
         query(queryStr, callback);
     }
 

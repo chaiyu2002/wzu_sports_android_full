@@ -1,20 +1,26 @@
 package com.tim.app.ui.activity;
 
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.BitmapFactory;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
 import com.amap.api.location.AMapLocationClientOption;
 import com.amap.api.location.AMapLocationListener;
 import com.application.library.log.DLOG;
+import com.tim.app.R;
 
 import java.util.ArrayList;
 
@@ -115,8 +121,8 @@ public class LocationService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        super.onStartCommand(intent, flags, startId);
+    public int onStartCommand(Intent i, int flags, int startId) {
+        super.onStartCommand(i, flags, startId);
         DLOG.d(TAG, "onStartCommand");
         //初始化定位
 
@@ -125,6 +131,37 @@ public class LocationService extends Service {
                 "MyWakelockTag");
         WifiManager wm = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
         wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL, "MyWiFiLockTag");
+
+
+        Log.d(TAG, "onStartCommand()");
+        // 在API11之后构建Notification的方式
+        // 设置启动的程序，如果存在则找出，否则新的启动
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        if (i.getStringExtra("type").equals("跑步")) {
+            intent.setComponent(new ComponentName(this, SportDetailActivity.class));//（跑步）用ComponentName得到class对象
+        } else {
+            intent.setComponent(new ComponentName(this, SportFixedLocationActivity.class));//（区域）用ComponentName得到class对象
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);// 关键的一步，设置启动模式，两种情况
+        }
+
+        Notification.Builder builder = new Notification.Builder(this.getApplicationContext()); //获取一个Notification构造器
+        Intent nfIntent = new Intent(this, MainActivity.class);
+        // 设置PendingIntent
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, intent, 0);//将经过设置了的Intent绑定给PendingIntent
+        builder.setContentIntent(contentIntent);  // 设置PendingIntent
+        builder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), R.drawable.ic_launcher));    // 设置状态栏内的大图标
+        builder.setContentTitle(i.getStringExtra("type") + "运动中"); // 设置下拉列表里的标题
+        builder.setSmallIcon(R.drawable.ic_launcher_notificationbar); // 设置状态栏内的小图标
+        builder.setContentText("点击查看"); // 设置上下文内容
+        builder.setWhen(System.currentTimeMillis()); // 设置该通知发生的时间
+
+        Notification notification = builder.build(); // 获取构建好的Notification
+        //notification.defaults = Notification.DEFAULT_SOUND; //设置为默认的声音
+        // 参数一：唯一的通知标识；参数二：通知消息。
+        startForeground(110, notification);// 开始前台服务
+
 
         return START_STICKY;
     }
@@ -137,6 +174,7 @@ public class LocationService extends Service {
             mLocationClient.onDestroy();//销毁定位客户端，同时销毁本地定位服务。
             mLocationClient = null;
         }
+        stopForeground(true);// 停止前台服务--参数：表示是否移除之前的通知
     }
 
     @Override

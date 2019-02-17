@@ -17,6 +17,8 @@ import com.tim.app.server.api.ServerInterface;
 
 import org.json.JSONObject;
 
+import static com.tim.app.constant.AppConstant.student;
+
 /**
  * 体测数据
  */
@@ -31,7 +33,7 @@ public class BodyCheckDataActivity extends BaseActivity {
     private TextView tvWeight;
     private TextView tvVitalCapacity;
     private TextView tvBMI;
-    private int studentId = 2;
+    // private int studentId = 2;
 
     @Override
     protected void onBeforeSetContentLayout() {
@@ -122,7 +124,7 @@ public class BodyCheckDataActivity extends BaseActivity {
 
     @Override
     public void initData() {
-        ServerInterface.instance().queryFitnessCheckData(studentId, new JsonResponseCallback() {
+        ServerInterface.instance().queryFitnessCheckData(student.getId(), new JsonResponseCallback() {
             @Override
             public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                 if (errCode == 0) {

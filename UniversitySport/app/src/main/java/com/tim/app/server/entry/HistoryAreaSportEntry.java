@@ -28,6 +28,4 @@ public class HistoryAreaSportEntry extends HistorySportEntry {
         this.areaSport = areaSport;
     }
 
-
-
 }

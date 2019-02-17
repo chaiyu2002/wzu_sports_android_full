@@ -7,9 +7,9 @@ android {
     defaultConfig {
         applicationId "com.guangyangyundong.sport"
         minSdkVersion 19
-        targetSdkVersion 22
-        versionCode 18
-        versionName "1.1.0.de0e92e"
+        targetSdkVersion 23
+        versionCode 20
+        versionName "1.1.1.7cbd45d"
         manifestPlaceholders = [YOUR_APP_KEY: "57c68fab67e58ecacf002627"]
         multiDexEnabled true
         ndk { //设置支持的SO库架构（开发者可以根据需要，选择一个或多个平台的so）
@@ -67,8 +67,8 @@ dependencies {
     compile project(':BaseLibrary')
     testCompile 'junit:junit:4.12'
     //    compile 'com.amap.api:map3d-native:latest.integration'
-    compile 'com.amap.api:3dmap:latest.integration'
-    compile 'com.amap.api:location:latest.integration'
+    compile 'com.amap.api:3dmap:5.4.0'
+    compile 'com.amap.api:location:3.6.0'
     compile 'joda-time:joda-time:2.9.9'
     compile 'com.github.bumptech.glide:glide:4.0.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.0.0'
@@ -78,6 +78,7 @@ dependencies {
     compile 'com.android.support:support-v4:25.0.0'
     compile 'com.tencent.mm.opensdk:wechat-sdk-android-with-mta:+'
     compile files('src/libs/GDTUnionSDK.4.15.559.min.jar')
+    compile 'com.gavin.com.library:stickyDecoration:1.2.0'
 }
 
 def releaseTime() {

@@ -1,5 +1,6 @@
 package com.tim.app.util;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -18,6 +19,17 @@ import com.application.library.util.StringUtil;
 public class ToastUtil {
 
     private static Toast mToast;
+
+
+    public static void toast(Context context, String text) {
+        if (mToast != null) {
+            mToast.cancel();
+            mToast = Toast.makeText(context, text, Toast.LENGTH_SHORT);
+        } else {
+            mToast = Toast.makeText(context, text, Toast.LENGTH_SHORT);
+        }
+        mToast.show();
+    }
 
     public static void showToast(String obj) {
         if (obj != null) {

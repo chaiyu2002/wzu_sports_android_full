@@ -21,6 +21,7 @@ public class HistorySportEntry implements Serializable {
     private int kcalConsumed;
     private boolean qualified;
     private boolean isValid;
+    private boolean isVerified;
     private int qualifiedCostTime;
     private long minCostTime;
     private long createdAt;
@@ -102,6 +103,14 @@ public class HistorySportEntry implements Serializable {
 
     public void setValid(boolean valid) {
         isValid = valid;
+    }
+
+    public boolean isVerified() {
+        return isVerified;
+    }
+
+    public void setVerified(boolean verified) {
+        isVerified = verified;
     }
 
     public int getQualifiedCostTime() {

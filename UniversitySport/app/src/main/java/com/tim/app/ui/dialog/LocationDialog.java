@@ -27,8 +27,8 @@ public class LocationDialog extends Dialog implements OnClickListener{
         super(context, R.style.CommonDialog);
         setContentView(R.layout.dialog_sport);
         this.context = context;
-        brightness = BrightnessUtil.getScreenBrightness(context);
-        autoBrightness = BrightnessUtil.isAutoAdjustBrightness(getContext());
+        // brightness = BrightnessUtil.getScreenBrightness(context);
+        // autoBrightness = BrightnessUtil.isAutoAdjustBrightness(getContext());
         DLOG.d(TAG, "autoBrightness:" + autoBrightness);
     }
 
@@ -47,16 +47,16 @@ public class LocationDialog extends Dialog implements OnClickListener{
     public boolean onTouchEvent(@NonNull MotionEvent event) {
 
         DLOG.d(TAG, "BrightnessUtil.getScreenBrightness(getWindow())" + BrightnessUtil.getScreenBrightness(getWindow()));
-        boolean needToAdjustBrightness = Float.compare(BrightnessUtil.getScreenBrightness(getWindow()), 0.1f) == 0;
+        // boolean needToAdjustBrightness = Float.compare(BrightnessUtil.getScreenBrightness(getWindow()), 0.1f) == 0;
 
         // if 'layoutparams.screenBrightness' has not been previously overwritten in code, it will return -1;
-        if (needToAdjustBrightness || BrightnessUtil.getScreenBrightness(getWindow()) == -1) {
-            if (autoBrightness) {
-                BrightnessUtil.setScreenBrightness(getWindow(), 255);
-            } else {
-                BrightnessUtil.setScreenBrightness(getWindow(), this.brightness);
-            }
-        }
+        // if (needToAdjustBrightness || BrightnessUtil.getScreenBrightness(getWindow()) == -1) {
+        //     if (autoBrightness) {
+        //         BrightnessUtil.setScreenBrightness(getWindow(), 255);
+        //     } else {
+        //         BrightnessUtil.setScreenBrightness(getWindow(), this.brightness);
+        //     }
+        // }
         return super.onTouchEvent(event);
     }
 }

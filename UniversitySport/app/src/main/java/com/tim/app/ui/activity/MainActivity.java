@@ -3,10 +3,13 @@ package com.tim.app.ui.activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.design.widget.NavigationView;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AlertDialog;
@@ -40,10 +43,12 @@ import com.tim.app.constant.AppConstant;
 import com.tim.app.constant.AppStatusConstant;
 import com.tim.app.server.api.ServerInterface;
 import com.tim.app.server.entry.SportEntry;
+import com.tim.app.server.entry.User;
 import com.tim.app.ui.activity.setting.SettingActivity;
 import com.tim.app.ui.adapter.SportAdapter;
 import com.tim.app.ui.cell.GlideApp;
 import com.tim.app.ui.view.HomepageHeadView;
+import com.tim.app.ui.view.webview.WebViewActivity;
 import com.tim.app.util.DownloadAppUtils;
 import com.tim.app.util.MathUtil;
 
@@ -226,6 +231,10 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                             menuItem.setChecked(true);
                             //                            mDrawerLayout.closeDrawers();
                             switch (menuItem.getItemId()) {
+                                case R.id.nav_rank:
+                                    Intent intentRank = new Intent(MainActivity.this, SchoolRankingActivity.class);
+                                    startActivity(intentRank);
+                                    break;
                                 case R.id.nav_survey://历史数据概况
                                     Intent intent = new Intent(MainActivity.this, HistorySportActivity.class);
                                     startActivity(intent);
@@ -246,6 +255,8 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                                     WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
                                     req.userName = APP_USER_NAME;
                                     api.sendReq(req);
+                                case R.id.nav_help://帮助
+                                    WebViewActivity.loadUrl(MainActivity.this, "http://www.guangyangyundong.com:86/#/help", "帮助中心");
                                     break;
                                 case R.id.nav_set://设置
                                      Intent intentSetting = new Intent(MainActivity.this, SettingActivity.class);
@@ -318,18 +329,48 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
 
         DLOG.d(TAG, "position:" + position);
         DLOG.d(TAG, "sportEntry:" + sportEntry);
+        SharedPreferences sharedPreferences = getSharedPreferences(User.USER_SHARED_PREFERENCE, Context.MODE_PRIVATE);
+        Boolean isFirstLaunch = sharedPreferences.getBoolean(AppConstant.IS_FIRST_LAUNCH, true);
         if (sportEntry.getType() == SportEntry.RUNNING_SPORT) {
-            SportDetailActivity.start(this, sportEntry);
+            if (isFirstLaunch) {
+                showPermissionDialog();
+                sharedPreferences.edit().putBoolean(AppConstant.IS_FIRST_LAUNCH,false).apply();
+            } else {
+                SportDetailActivity.start(this, sportEntry);
+            }
         } else {
-            SportsAreaListActivity.start(this, sportEntry);
+            if (isFirstLaunch) {
+                showPermissionDialog();
+                sharedPreferences.edit().putBoolean(AppConstant.IS_FIRST_LAUNCH,false).apply();
+            } else {
+                SportsAreaListActivity.start(this, sportEntry);
+            }
         }
+    }
+
+    public void showPermissionDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("重要提示")
+                .setMessage("请授予应用定位权限，应用才可以正常工作~")
+                .setPositiveButton("去授权", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //引导用户至设置页手动授权
+                        Toast.makeText(MainActivity.this, "请授予应用定位权限~", Toast.LENGTH_SHORT).show();
+                        Intent intent1 = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                        Uri uri = Uri.fromParts("package", getApplicationContext().getPackageName(), null);
+                        intent1.setData(uri);
+                        startActivity(intent1);
+                    }
+                })
+                .setCancelable(false).show();
     }
 
     /**
      * 查询首页底部运动方式
      */
     public void queryRunningSport() {
-        ServerInterface.instance().queryRunningSports(AppConstant.UNIVERSITY_ID, mIsEnable, student.isMan(), new JsonResponseCallback() {
+        ServerInterface.instance().queryRunningSports(student.getUniversityId(), mIsEnable, student.isMan(), new JsonResponseCallback() {
             @Override
             public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                 if (errCode == 0) {
@@ -356,6 +397,10 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
 
                             int distance = jsonObject.getInt("qualifiedDistance");
                             sportEntry.setQualifiedDistance(distance);
+
+                            int stepThreshold = jsonObject.getInt("stepThreshold");
+                            DLOG.d(TAG, "stepThreshold:" + stepThreshold);
+                            sportEntry.setStepThreshold(stepThreshold);
 
                             double time = jsonObject.getDouble("qualifiedCostTime");
                             BigDecimal targetSpeed = MathUtil.bigDecimalDivide(Double.toString(distance),
@@ -403,7 +448,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
      * 查询首页顶部本学期运动记录
      */
     public void queryCurTermData() {
-        ServerInterface.instance().queryCurTermData(AppConstant.UNIVERSITY_ID, student.getId(), new JsonResponseCallback() {
+        ServerInterface.instance().queryCurTermData(student.getUniversityId(), student.getId(), new JsonResponseCallback() {
             @Override
             public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                 if (errCode == 0) {
@@ -460,7 +505,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
      */
     public void queryAreaSport() {
         //        mAreaSportEntryList = new ArrayList<>();
-        ServerInterface.instance().queryAreaSport(AppConstant.UNIVERSITY_ID, new JsonResponseCallback() {
+        ServerInterface.instance().queryAreaSport(student.getUniversityId(), new JsonResponseCallback() {
             @Override
             public boolean onJsonResponse(JSONObject json, int errCode, String errMsg, int id, boolean fromCache) {
                 SportEntry areaSportEntry = new SportEntry();
@@ -481,6 +526,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                             //                        areaSportEntry.setEnable(jsonObject.optBoolean("isEnable"));
                             areaSportEntry.setTargetTime(jsonObject.getInt("qualifiedCostTime"));
                             areaSportEntry.setAcquisitionInterval(jsonObject.getInt("acquisitionInterval"));
+                            areaSportEntry.setParticipantNum(jsonObject.getInt("participantNum"));
 
                             areaSportEntry.setImgUrl(jsonObject.getString("imgUrl"));
                             areaSportEntry.setBgDrawableId(R.drawable.ic_bg_area);
@@ -534,15 +580,23 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                         PackageManager manager = context.getPackageManager();
                         PackageInfo info = manager.getPackageInfo(context.getPackageName(), 0);
 
+                        SharedPreferences sp = getSharedPreferences(User.USER_UPDATE_PREFERENCE, Context.MODE_PRIVATE);
+                        int ignoreVersion = sp.getInt(User.IGNORE_VERSION, 0);
+                        DLOG.d(TAG, "ignoreVersion:" + ignoreVersion);
+                        if (ignoreVersion == versionCode) {
+                            return false;
+                        }
+
                         DLOG.d(TAG, "服务器版本" + versionCode);
                         DLOG.d(TAG, "客户端版本" + info.versionCode);
                         if (versionCode > info.versionCode) {
 
                             final AlertDialog.Builder builder =
                                     new AlertDialog.Builder(context);
-                            AlertDialog dialog;
+
                             builder.setTitle("版本升级");
-                            builder.setPositiveButton("确认",
+                            builder.setMessage(changeLog.replace("\\n", " \n"));
+                            builder.setPositiveButton("升级",
                                     new DialogInterface.OnClickListener() {
 
                                         @Override
@@ -550,22 +604,42 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                                             DownloadAppUtils.downloadForAutoInstall(context, downloadUrl, "下载新版本");
                                         }
                                     });
-                            builder.setMessage(changeLog.replace("\\n", " \n"));
 
                             if (isForced) {//强制升级
                                 builder.setCancelable(false);
                                 //对话框不变化
                             } else {
-                                builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                                builder.setNegativeButton("暂不升级", new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
                                         dialog.dismiss();
                                     }
                                 });
+                                builder.setNeutralButton("忽略本次", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        SharedPreferences.Editor sp = getSharedPreferences(User.USER_UPDATE_PREFERENCE, Context.MODE_PRIVATE).edit();
+                                        sp.putInt(User.IGNORE_VERSION, versionCode);
+                                        sp.apply();
+                                    }
+                                });
                             }
 
-                            dialog = builder.create();
+                            AlertDialog dialog = builder.create();
                             dialog.show();
+
+                            if (isForced) {
+                                // 重写“确定”（AlertDialog.BUTTON_POSITIVE），截取监听
+                                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                        DownloadAppUtils.downloadForAutoInstall(context, downloadUrl, "下载新版本");
+                                        Toast.makeText(context, "开始下载新版本", Toast.LENGTH_SHORT).show();
+                                        // 这里可以控制是否让对话框消失
+                                        // dialog.dismiss();
+                                    }
+                                });
+                            }
 
                         } else {
                             // TODO no update
