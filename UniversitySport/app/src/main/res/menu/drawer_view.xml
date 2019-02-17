@@ -27,10 +27,6 @@
             android:icon="@drawable/nav_custom_service_selector"
             android:title="帮助中心"/>
         <item
-            android:id="@+id/nav_customer_service"
-            android:icon="@drawable/nav_custom_service_selector"
-            android:title="客服" />
-        <item
             android:id="@+id/nav_set"
             android:icon="@drawable/nav_sets_selector"
             android:title="设置"/>

@@ -56,6 +56,23 @@
 
         </FrameLayout>
 
+        <FrameLayout
+            android:id="@+id/frTitleMenu"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:paddingLeft="15dp"
+            android:paddingRight="15dp">
+
+            <ImageView
+                android:id="@+id/ivTitleHelp"
+                android:layout_width="23dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:src="@drawable/titlebar_contact"/>
+        </FrameLayout>
+
     </android.support.v7.widget.Toolbar>
 
 </android.support.design.widget.AppBarLayout>

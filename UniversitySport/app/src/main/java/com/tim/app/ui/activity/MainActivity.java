@@ -87,6 +87,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
     private DrawerLayout mDrawerLayout;
 
     private FrameLayout flMenu;
+    private FrameLayout frMenu;
     //    private ImageView ibNotify;
     //    private TextView tvLogout;
     private TextView tvUserName;
@@ -190,7 +191,8 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
         flMenu = (FrameLayout) findViewById(R.id.flTitleMenu);
         flMenu.setOnClickListener(this);
         flMenu.setVisibility(View.VISIBLE);
-
+        frMenu = (FrameLayout) findViewById(R.id.frTitleMenu);
+        frMenu.setOnClickListener(this);
         //        ibNotify = (ImageView) findViewById(ibNotify);
         //        tvLogout = (TextView) findViewById(tvLogout);
         //        badNetworkView = (BadNetworkView) findViewById(R.id.bnvContainer);
@@ -250,11 +252,6 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                                 //                                    break;
                                 //                                case R.id.nav_approval://审批
                                 //                                    break;
-                                case R.id.nav_customer_service://客服
-                                    IWXAPI api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID, false);
-                                    WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
-                                    req.userName = APP_USER_NAME;
-                                    api.sendReq(req);
                                 case R.id.nav_help://帮助
                                     WebViewActivity.loadUrl(MainActivity.this, "http://www.guangyangyundong.com:86/#/help", "帮助中心");
                                     break;
@@ -708,6 +705,12 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
         switch (v.getId()) {
             case R.id.flTitleMenu:
                 mDrawerLayout.openDrawer(Gravity.LEFT);
+                break;
+            case R.id.frTitleMenu:
+                IWXAPI api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID, false);
+                WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
+                req.userName = APP_USER_NAME;
+                api.sendReq(req);
                 break;
             // case tvLogout:
             //     startActivity(new Intent(this,LoginActivity.class));
