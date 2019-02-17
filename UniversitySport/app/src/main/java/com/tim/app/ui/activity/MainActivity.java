@@ -708,6 +708,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                 break;
             case R.id.frTitleMenu:
                 IWXAPI api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID);
+                api.registerApp(APP_ID);
                 WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
                 req.userName = APP_USER_NAME;
                 req.path = "";
