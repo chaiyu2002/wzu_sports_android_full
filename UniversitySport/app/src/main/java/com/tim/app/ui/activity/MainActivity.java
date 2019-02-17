@@ -76,6 +76,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
     public static final int SPORT_BACKGROUND_HEIGHT = 465;
     public static final String APP_ID = "wx24a2c72c638267d7";
     public static final String APP_USER_NAME = "gh_2a8433042436";
+    private IWXAPI api;
 
     //    public static User user;
     //    public static Student student;
@@ -680,6 +681,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
         } else {
             // ignore it
         }
+        regToWx();
     }
 
     private void queryHomePagedata() {
@@ -707,8 +709,6 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                 mDrawerLayout.openDrawer(Gravity.LEFT);
                 break;
             case R.id.frTitleMenu:
-                IWXAPI api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID);
-                api.registerApp(APP_ID);
                 WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
                 req.userName = APP_USER_NAME;
                 req.path = "";
@@ -753,5 +753,10 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+    }
+
+    private void regToWx() {
+        api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID);
+        api.registerApp(APP_ID);
     }
 }
