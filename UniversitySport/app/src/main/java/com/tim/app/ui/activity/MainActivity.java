@@ -707,9 +707,11 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                 mDrawerLayout.openDrawer(Gravity.LEFT);
                 break;
             case R.id.frTitleMenu:
-                IWXAPI api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID, false);
+                IWXAPI api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID);
                 WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
                 req.userName = APP_USER_NAME;
+                req.path = "";
+                req.miniprogramType = WXLaunchMiniProgram.Req.MINIPTOGRAM_TYPE_RELEASE;
                 api.sendReq(req);
                 break;
             // case tvLogout:
