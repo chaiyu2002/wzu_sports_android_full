@@ -710,9 +710,9 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
                 break;
             case R.id.frTitleMenu:
                 WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
-                req.userName = APP_USER_NAME;
-                req.path = "";
-                req.miniprogramType = WXLaunchMiniProgram.Req.MINIPTOGRAM_TYPE_RELEASE;
+                req.userName = APP_USER_NAME; // 填小程序原始id
+                req.path = "";                  //拉起小程序页面的可带参路径，不填默认拉起小程序首页
+                req.miniprogramType = WXLaunchMiniProgram.Req.MINIPTOGRAM_TYPE_RELEASE;// 可选打开 开发版，体验版和正式版
                 api.sendReq(req);
                 break;
             // case tvLogout:
@@ -756,7 +756,8 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
     }
 
     private void regToWx() {
-        api = WXAPIFactory.createWXAPI(MainActivity.this, APP_ID);
+        DLOG.d("regToWx");
+        api = WXAPIFactory.createWXAPI(this, APP_ID);
         api.registerApp(APP_ID);
     }
 }
