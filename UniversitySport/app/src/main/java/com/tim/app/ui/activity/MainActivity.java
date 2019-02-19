@@ -74,7 +74,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
     private static final String TAG = "MainActivity";
     public static final int SPORT_BACKGROUND_WIDTH = 1080;
     public static final int SPORT_BACKGROUND_HEIGHT = 465;
-    public static final String APP_ID = "wx24a2c72c638267d7";
+    public static final String APP_ID = "wxc602178d95890ea2";
     public static final String APP_USER_NAME = "gh_2a8433042436";
     private IWXAPI api;
 
@@ -192,7 +192,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
         flMenu = (FrameLayout) findViewById(R.id.flTitleMenu);
         flMenu.setOnClickListener(this);
         flMenu.setVisibility(View.VISIBLE);
-        frMenu = (FrameLayout) findViewById(R.id.frTitleMenu);
+        frMenu = (FrameLayout) findViewById(R.id.flCustomerService);
         frMenu.setOnClickListener(this);
         //        ibNotify = (ImageView) findViewById(ibNotify);
         //        tvLogout = (TextView) findViewById(tvLogout);
@@ -708,7 +708,7 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
             case R.id.flTitleMenu:
                 mDrawerLayout.openDrawer(Gravity.LEFT);
                 break;
-            case R.id.frTitleMenu:
+            case R.id.flCustomerService:
                 WXLaunchMiniProgram.Req req = new WXLaunchMiniProgram.Req();
                 req.userName = APP_USER_NAME; // 填小程序原始id
                 req.path = "";                  //拉起小程序页面的可带参路径，不填默认拉起小程序首页
