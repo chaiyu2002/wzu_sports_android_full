@@ -158,7 +158,7 @@
     <string name="qualifiedDistance">达标距离</string>
     <string name="accumTimesPer">本周累计运动(次)</string>
     <string name="signInCount">打卡(次)</string>
-    <string name="curTermSportsCount">本学期累计运动(次)</string>
+    <string name="curTermSportsCount">累计运动(次)</string>
 
     <!--公用-->
     <string name="digitalPlaceholder">%s</string>
@@ -173,7 +173,7 @@
     <string name="curConsumeEnergyTemp">本次消耗热量: %s千卡</string>
     
     <string name="minute">分钟</string>
-    <string name="consumeMinute">耗时(分钟)</string>
+    <string name="consumeMinute">累计耗时(分钟)</string>
     <string name="consumeTime">耗时</string>
     <string name="minutePlaceHolder">%s 分钟</string>
 
