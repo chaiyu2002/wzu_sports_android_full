@@ -7,10 +7,10 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#ffffffff"
-        android:elevation="5dp">
+        android:background="#ffffffff">
 
         <LinearLayout
+            android:id="@+id/llHeadView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="25dp"
@@ -183,15 +183,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
                 android:background="#F5F6FA"
                 >
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_marginBottom="10dp"
                     android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp"
                     android:layout_marginStart="10dp"
                     android:gravity="center_vertical"
                     android:drawablePadding="10dp"
@@ -227,15 +226,20 @@
         </LinearLayout>
     </FrameLayout>
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginTop="15dp"
-        android:gravity="center"
-        android:text="运动方式"
-        android:textColor="#ff666666"
-        android:textSize="16sp"
-        android:textStyle="bold"/>
+        android:background="#fff">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:layout_marginTop="15dp"
+            android:gravity="center"
+            android:text="运动方式"
+            android:textColor="#ff666666"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
 
 </com.tim.app.ui.view.HomepageHeadView>

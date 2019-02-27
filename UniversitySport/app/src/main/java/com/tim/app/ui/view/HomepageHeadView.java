@@ -51,8 +51,8 @@ public class HomepageHeadView extends LinearLayout implements View.OnClickListen
 
 //        rlSecond = (RelativeLayout) findViewById(R.id.rlSecond);
 //        rlSecond.setOnClickListener(this);
-//        rlHeadView = (LinearLayout) findViewById(R.id.llHeadView);
-//        rlHeadView.setOnClickListener(this);
+        rlHeadView = (LinearLayout) findViewById(R.id.llHeadView);
+        rlHeadView.setOnClickListener(this);
         rlRank = (RelativeLayout) findViewById(R.id.rlRank);
         rlRank.setOnClickListener(this);
 //        rlTop = (RelativeLayout) findViewById(R.id.rlTop);
@@ -75,9 +75,9 @@ public class HomepageHeadView extends LinearLayout implements View.OnClickListen
 //            case R.id.rlSecond:
 //                getContext().startActivity(new Intent(getContext(), HistorySportActivity.class));
 //                break;
-//            case R.id.llHeadView:
-//                getContext().startActivity(new Intent(getContext(), HistorySportActivity.class));
-//                break;
+            case R.id.llHeadView:
+                getContext().startActivity(new Intent(getContext(), HistorySportActivity.class));
+                break;
         }
     }
 
