@@ -77,7 +77,6 @@ dependencies {
     compile 'com.android.support:design:25.0.0'
     compile 'com.android.support:support-v4:25.0.0'
     compile 'com.tencent.mm.opensdk:wechat-sdk-android-with-mta:5.3.1'
-    compile files('src/libs/GDTUnionSDK.4.15.559.min.jar')
     compile 'com.gavin.com.library:stickyDecoration:1.2.0'
 }
 
