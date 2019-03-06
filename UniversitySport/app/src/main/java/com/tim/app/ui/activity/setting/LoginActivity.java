@@ -116,7 +116,7 @@ public class LoginActivity extends BaseActivity {
         // queryUniversities();
 
         if (!NetUtils.isConnection(this)) {
-            Toast.makeText(context, getString(R.string.httpconnection_not_network), Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, getString(R.string.network_not_good), Toast.LENGTH_SHORT).show();
         }
 
         tvNoErrorPrmpt = (TextView) findViewById(R.id.tvStuNoErrorPrmpt);

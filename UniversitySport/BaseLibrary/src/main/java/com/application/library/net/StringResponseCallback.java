@@ -13,7 +13,7 @@ public abstract class StringResponseCallback extends ResponseCallback {
     public boolean onResponse(Object resultInfo, int httpErr, String errMsg, int id, boolean fromCache) {
         if (httpErr != 0 || resultInfo == null || !(resultInfo instanceof byte[])) {
             if (httpErr == -1) {
-                errMsg = "网络不给力,请稍后重试";
+                errMsg = "网络不给力，请检查网络";
             }
             return onStringResponse(null, httpErr, errMsg, id, fromCache);
         }

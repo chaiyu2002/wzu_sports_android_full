@@ -12,7 +12,7 @@ public abstract class JsonResponseCallback extends ResponseCallback {
     public boolean onResponse(Object result, int httpErr, String errMsg, int id, boolean fromCache) {
         if (httpErr != 0 || result == null || !(result instanceof byte[])) {
             if (httpErr == -1) {
-                errMsg = "网络不给力,请稍后重试";
+                errMsg = "网络不给力，请检查网络";
             }
             return onJsonResponse(null, httpErr, errMsg, id, fromCache);
         }

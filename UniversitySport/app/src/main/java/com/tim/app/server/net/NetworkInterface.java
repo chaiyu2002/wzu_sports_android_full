@@ -176,6 +176,8 @@ public class NetworkInterface {
                     } else {
                         callback.onResponse(null, -1, "", 0, false);
                     }
+//                    //TODO added by chaiyu for debugging 2019-03-06
+//                    callback.onResponse(null, response.code(), e.getMessage(), 0, false);
                 }
 
                 @Override

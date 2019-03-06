@@ -52,6 +52,9 @@ public class NetWorkStateReceiver extends BroadcastReceiver {
             for (int i = 0; i < networks.length; i++) {
                 //获取ConnectivityManager对象对应的NetworkInfo对象
                 NetworkInfo networkInfo = connMgr.getNetworkInfo(networks[i]);
+                if (networkInfo == null) {
+                    continue;
+                }
                 sb.append(networkInfo.getTypeName() + " connect is " + networkInfo.isConnected());
             }
 //            Toast.makeText(context, sb.toString(), Toast.LENGTH_SHORT).show();
