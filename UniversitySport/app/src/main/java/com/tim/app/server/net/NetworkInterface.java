@@ -168,14 +168,15 @@ public class NetworkInterface {
                     callback.onResponse(s.getBytes(), 0, "", 0, true);
                 }
 
-                @Override
+                @Override // TODO 这里都会有什么错误呢？
                 public void onError(Call call, Response response, Exception e) {
                     super.onError(call, response, e);
-                    if (e instanceof UnknownHostException) {
-                        callback.onResponse(null, -1, RT.getString(R.string.def_net_error_text), 0, false);
-                    } else {
-                        callback.onResponse(null, -1, "", 0, false);
-                    }
+//                    if (e instanceof UnknownHostException) {
+//                        callback.onResponse(null, -1, RT.getString(R.string.def_net_error_text), 0, false);
+//                    } else {
+//                        callback.onResponse(null, -1, "", 0, false);
+//                    }
+                    callback.onResponse(null, -1, RT.getString(R.string.def_net_error_text), 0, false);
 //                    //TODO added by chaiyu for debugging 2019-03-06
 //                    callback.onResponse(null, response.code(), e.getMessage(), 0, false);
                 }

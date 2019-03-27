@@ -10,7 +10,7 @@
 
     <!-- empty layout -->
     <string name="def_empty_data_text">没有内容</string>
-    <string name="def_net_error_text">网络不给力，请稍后重试</string>
+    <string name="def_net_error_text">网络不给力，请稍后再试</string>
     <string name="def_empty_button_retry">重试</string>
 
     <!-- 下拉刷新 -->

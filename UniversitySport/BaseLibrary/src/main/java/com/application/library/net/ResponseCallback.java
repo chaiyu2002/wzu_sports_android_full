@@ -14,7 +14,7 @@ package com.application.library.net;
  * 
  * @author yangyu
  */
-public abstract class ResponseCallback
+public abstract class  ResponseCallback
 {
     public abstract boolean onResponse(Object result, int status, String errmsg, int id, boolean fromcache);
 

@@ -64,6 +64,7 @@ import com.application.library.net.ResponseCallback;
 import com.application.library.util.NetUtils;
 import com.lzy.okhttputils.OkHttpUtils;
 import com.tim.app.R;
+import com.tim.app.RT;
 import com.tim.app.constant.AppConstant;
 import com.tim.app.server.api.ServerInterface;
 import com.tim.app.server.entry.HistoryRunningSportEntry;
@@ -658,14 +659,12 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                         locationType, isNormal, new ResponseCallback() {
                             @Override
                             public boolean onResponse(Object result, int status, String errmsg, int id, boolean fromcache) {
+                                // 返回-1，表示网络是存在问题的
                                 if (status == 0) {
                                     DLOG.d(TAG, "runningActivityData succeed");
                                     return true;
                                 } else {
-                                    String msg = "runningActivityData failed, errmsg: " + errmsg + "\r\n";
-                                    msg += "net type: " + NetUtils.getNetWorkType(SportDetailActivity.this) + "\r\n";
-                                    msg += "net connectivity is: " + NetUtils.isConnection(SportDetailActivity.this) + "\r\n";
-                                    DLOG.writeToInternalFile(msg);
+                                    Toast.makeText(context, RT.getString(R.string.def_net_error_text), Toast.LENGTH_SHORT).show();
                                     return false;
                                 }
                             }
