@@ -7,7 +7,7 @@ android {
     }
 
     compileSdkVersion 29
-    buildToolsVersion '28.0.3'
+    buildToolsVersion '29'
 
     defaultConfig {
         applicationId "com.guangyangyundong.sport"
