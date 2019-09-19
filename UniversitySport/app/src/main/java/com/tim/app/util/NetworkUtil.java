@@ -33,7 +33,7 @@ public class NetworkUtil {
         }
     }
 
-    public static boolean isWifi(Context context) {
+    public static boolean isWifiConnected(Context context) {
         ConnectivityManager cm =
                 (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
@@ -42,7 +42,7 @@ public class NetworkUtil {
         return isWifi;
     }
 
-    public static boolean isMobile(Context context) {
+    public static boolean isMobileConnected(Context context) {
         ConnectivityManager cm =
                 (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
