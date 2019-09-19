@@ -111,7 +111,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     private AMap aMap;
     private LatLng lastLatLng = null;
     private UiSettings uiSettings;
-    private float zoomLevel = 19;//地图缩放级别，范围3-19,越大越精细
+    private float zoomLevel = 17;//地图缩放级别，范围3-19,越大越精细
     private Location firstLocation;
     private int firstLocationType;
 

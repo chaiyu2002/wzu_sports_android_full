@@ -21,7 +21,7 @@ import com.tim.app.server.entry.User;
 import com.tim.app.ui.activity.AboutActivity;
 import com.tim.app.ui.activity.ToolbarActivity;
 import com.tim.app.util.DownloadAppUtils;
-import com.tim.app.util.NetUtil;
+import com.tim.app.util.NetworkUtil;
 import com.tim.app.util.ToastUtil;
 
 import org.json.JSONObject;
@@ -69,7 +69,7 @@ public class SettingActivity extends ToolbarActivity {
         if (v.getId() == R.id.rlAboutUS) {
             AboutActivity.start(this);
         } else if (v.getId() == R.id.rlCheckUpdate) {
-            if (!NetUtil.isConnected(SettingActivity.this)) {
+            if (!NetworkUtil.isNetworkConnected(SettingActivity.this)) {
                 Toast.makeText(this, "请检查网络~", Toast.LENGTH_SHORT).show();
                 return;
             }

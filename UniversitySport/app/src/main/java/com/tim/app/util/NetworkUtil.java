@@ -4,21 +4,33 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
+import java.net.InetAddress;
+
 /**
  * @创建者 倪军
  * @创建时间 10/10/2017
  * @描述
  */
 
-public class NetUtil {
+public class NetworkUtil {
 
-    public static boolean isConnected(Context context) {
+    public static boolean isNetworkConnected(Context context) {
         ConnectivityManager cm =
                 (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
 
         boolean isConnected = activeNetwork != null && activeNetwork.isConnected();
         return isConnected;
+    }
+
+    public boolean isInternetAvailable() {
+        try {
+            InetAddress ipAddr = InetAddress.getByName("www.sina.com.cn");
+            return !ipAddr.equals("");
+
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public static boolean isWifi(Context context) {
