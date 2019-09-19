@@ -148,26 +148,6 @@
 
 
 
-
-
- #--------------alipay-------------
- -keep class com.ta.utdid2.** {
-     public <fields>;
-     public <methods>;
- }
- -keep class com.ut.device.** {
-     public <fields>;
-     public <methods>;
- }
- -keep class HttpUtils.** {
-     public <fields>;
-     public <methods>;
- }
-
-#畅言所有权限-------------------------------start------------------------------------------
-
-#-libraryjars libs/android-support-v4.jar
-
 -dontwarn com.avos.avoscloud.**
 
 -keep class android.net.http.** { *;}
@@ -265,7 +245,7 @@
 -keep class com.autonavi.**{*;}
 
 #
---keep class com.autonavi.**{*;}
+-keep class com.autonavi.**{*;}
 
 -keep class com.tencent.mm.opensdk.** {
     *;
@@ -281,3 +261,11 @@
 
 -dontwarn com.tencent.bugly.**
 -keep public class com.tencent.bugly.**{*;}
+
+-keep class org.codehaus.mojo.animal_sniffer.**{*;}
+-keep class org.joda.convert.**{*;}
+
+
+
+
+

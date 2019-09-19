@@ -522,7 +522,6 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                 locationType = bundle.getInt(MyLocationStyle.LOCATION_TYPE);
             }
 
-
             //定位成功
             if (errorCode != 0) {
                 String errText = "正在定位中";
@@ -534,7 +533,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                     Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
 
                     if (NetworkUtil.isWifiConnected(this) && !NetworkUtil.isNetworkConnected(this)) {
-                        msg = "当前的Wi-Fi连接没有连上互联网，请断开Wi-Fi，但不要关闭Wi-Fi";
+                        msg = "当前的Wi-Fi连接没有连上互联网，请断开Wi-Fi，但不要关闭Wi-Fi，可以帮助更好地定位";
                         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
                     }
                 }
