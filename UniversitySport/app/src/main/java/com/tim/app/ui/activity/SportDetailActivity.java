@@ -528,13 +528,21 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                 Toast.makeText(this, errText, Toast.LENGTH_SHORT).show();
                 return;
             } else {
+                // 定位精度不足，判断网络状态，提示用户打开WiFi
                 if (location.getAccuracy() > 10) {
-                    String msg = "GPS信号弱，当前定位精度为" + location.getAccuracy() + "米, 定位类型：" + locationType;
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+                    String msg;
+                    // 测试提示
+//                    String msg = "GPS信号弱，当前定位精度为" + location.getAccuracy() + "米, 定位类型：" + locationType;
+//                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
 
-                    if (NetworkUtil.isWifiConnected(this) && !NetworkUtil.isNetworkConnected(this)) {
-                        msg = "当前的Wi-Fi连接没有连上互联网，请断开Wi-Fi，但不要关闭Wi-Fi，可以帮助更好地定位";
+                    if (!NetworkUtil.isWifiOpened(this)) {
+                        msg = "请打开WiFi，可以帮助更好地定位";
                         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+                    } else {
+                        if (NetworkUtil.isWifiConnected(this) && !NetworkUtil.isNetworkConnected(this)) {
+                            msg = "当前的Wi-Fi连接没有连上互联网，请断开局域网连接，但不要关闭Wi-Fi，可以帮助更好地定位";
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
                 newLatLng = new LatLng(location.getLatitude(), location.getLongitude());

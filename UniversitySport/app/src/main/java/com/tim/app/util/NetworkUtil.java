@@ -3,6 +3,7 @@ package com.tim.app.util;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiManager;
 
 import java.net.InetAddress;
 
@@ -40,6 +41,17 @@ public class NetworkUtil {
 
         boolean isWifi = activeNetwork.getType() == ConnectivityManager.TYPE_WIFI;
         return isWifi;
+    }
+
+    // 检查WiFi状态，参考：https://stackoverflow.com/questions/6593858/checking-wi-fi-enabled-or-not-on-android
+    public static boolean isWifiOpened(Context context) {
+        WifiManager wifi = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        if (wifi.isWifiEnabled()) {
+            return  true;
+        } else {
+            return false;
+        }
+
     }
 
     public static boolean isMobileConnected(Context context) {
