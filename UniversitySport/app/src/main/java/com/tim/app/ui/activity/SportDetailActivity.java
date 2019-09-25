@@ -353,9 +353,9 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
 
         initLocationDislog();
 
-        initGPS();
-
         checkLocationPermissions();    //检查定位权限
+
+        initGPS();
 
         Float level = getBatteryLevel();
         tvRemainPower = (TextView) locationDialog.findViewById(R.id.tvRemainPower);
