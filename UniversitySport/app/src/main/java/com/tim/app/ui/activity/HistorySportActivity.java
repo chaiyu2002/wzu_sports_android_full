@@ -99,7 +99,7 @@ public class HistorySportActivity extends ToolbarActivity {
         pagerAdapter.addFragment(fragmentTerm, "本学期");
         vpHistoryData.setOffscreenPageLimit(2);//除去当前显示页面外，还需要预先加载的页面个数
         vpHistoryData.setAdapter(pagerAdapter);
-        vpHistoryData.setCurrentItem(0);
+        vpHistoryData.setCurrentItem(2);
         vpHistoryData.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
