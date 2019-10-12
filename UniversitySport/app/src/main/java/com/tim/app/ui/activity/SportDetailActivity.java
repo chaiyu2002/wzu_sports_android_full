@@ -354,9 +354,9 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
 
         initLocationDislog();
 
-        initGPS();
+        checkLocationPermissions();    //检查定位权限
 
-        checkLocationPermissonNew();    //检查定位权限
+        initGPS();
 
         Float level = getBatteryLevel();
         tvRemainPower = (TextView) locationDialog.findViewById(R.id.tvRemainPower);
@@ -898,16 +898,6 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                 }
                 break;
             case REQUEST_PERMISSION_WRITE_FINE_LOCATION:
-                //                String permission = Manifest.permission.ACCESS_FINE_LOCATION;
-                //                String op = AppOpsManagerCompat.permissionToOp(permission);
-                //                int result = AppOpsManagerCompat.noteProxyOp(context, op, context.getPackageName());
-                //                if (result == AppOpsManagerCompat.MODE_IGNORED
-                //                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                //                    DLOG.d("onRequestPermissionsResult", "onRequestPermissionsResult");
-                //                    Toast.makeText(this,
-                //                            getString(R.string.manual_open_permission_hint),
-                //                            Toast.LENGTH_SHORT).show();
-                //                }
                 DLOG.d(TAG, "grantResults.length:" + grantResults.length);
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -952,7 +942,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                 }).setCancelable(false).show();
     }
 
-    public void checkLocationPermissonNew() {
+    public void checkLocationPermissions() {
         if (ContextCompat.checkSelfPermission(SportDetailActivity.this,
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -960,17 +950,13 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
             ActivityCompat.requestPermissions(SportDetailActivity.this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     REQUEST_PERMISSION_WRITE_FINE_LOCATION);
-            DLOG.d(TAG, "没有授予");
         } else {
-            DLOG.d(TAG, "授予了");
             // 小米手机5.0，无法正确获得是否授权
             if (SystemUtil.getRomType().equals(SystemUtil.SYS_MIUI)) {
                 String permission = Manifest.permission.ACCESS_FINE_LOCATION;
                 String op = AppOpsManagerCompat.permissionToOp(permission);
                 int result = AppOpsManagerCompat.noteProxyOp(context, op, context.getPackageName());
-                DLOG.d(TAG, "result:" + result);
                 if (result == AppOpsManagerCompat.MODE_IGNORED) {
-                    DLOG.d(TAG, "没有定位权限");
                     if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
                             Manifest.permission.ACCESS_FINE_LOCATION)) {
                         if (!testAppops()) {
@@ -983,7 +969,6 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
                     }
                 } else {
                     // 有权限或者默认。
-                    DLOG.d(TAG, "ACCESS_FINE_LOCATION was GRANTED!");
                 }
             }
         }
@@ -1008,43 +993,6 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         return true;
     }
 
-    public boolean checkLocationPermission() {
-
-        DLOG.d(TAG + "SystemRom: ", SystemUtil.getRomType());
-        // 小米手机5.0权限
-        if (SystemUtil.getRomType().equals(SystemUtil.SYS_MIUI)) {
-            String permission = Manifest.permission.ACCESS_FINE_LOCATION;
-            String op = AppOpsManagerCompat.permissionToOp(permission);
-            int result = AppOpsManagerCompat.noteProxyOp(context, op, context.getPackageName());
-            if (result == AppOpsManagerCompat.MODE_IGNORED
-                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                DLOG.d(TAG, "没有定位权限");
-                if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.ACCESS_FINE_LOCATION)) {
-                    Toast.makeText(this,
-                            getString(R.string.manual_open_permission_hint),
-                            Toast.LENGTH_SHORT).show();
-                } else {
-                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                            REQUEST_PERMISSION_WRITE_FINE_LOCATION);
-                }
-                return false;
-            } else {
-                // 有权限或者默认。
-                DLOG.d(TAG, "ACCESS_FINE_LOCATION was GRANTED!");
-                return true;
-            }
-        }
-        // 判断定位服务开关
-        if (!locationManager
-                .isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
-            buildLocationServiceDialog();
-            return false;
-        } else {
-            return true;
-        }
-    }
-
     @Override
     public void onClick(View v) {
         turnUpScreen();
@@ -1053,30 +1001,6 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
             //     finish();
             //     break;
             case R.id.btStart:
-
-                DLOG.d(TAG, "ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION):" + ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION));
-                DLOG.d(TAG, "ActivityCompat.shouldShowRequestPermissionRationale(this," + ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.ACCESS_FINE_LOCATION));
-
-                // 先检查定位权限
-                // if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                //         != PackageManager.PERMISSION_GRANTED) {
-                //     if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                //             Manifest.permission.ACCESS_FINE_LOCATION)) {
-                //         // Toast.makeText(this, "shouldShowRequestPermissionRationale", Toast.LENGTH_SHORT).show();
-                //
-                //     } else {
-                //         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                //                 REQUEST_PERMISSION_WRITE_FINE_LOCATION);
-                //
-                //     }
-                // }
-
-                // 没有定位权限，不能开始运动。
-                if (!checkLocationPermission()) {
-                    return;
-                }
-
                 if (state == STATE_NORMAL) {
                     DLOG.d(TAG, "sportEntry.getId():" + sportEntry.getId());
                     startTime = System.currentTimeMillis();

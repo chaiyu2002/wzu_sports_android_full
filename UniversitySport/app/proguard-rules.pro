@@ -137,7 +137,6 @@
      public static ** valueOf(java.lang.String);
  }
 
- -ignorewarning
  -keep public class * extends android.widget.TextView
 
  #-----------keep httpclient -------------------

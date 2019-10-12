@@ -318,27 +318,18 @@ public class MainActivity extends BaseActivity implements BaseRecyclerAdapter.On
     @Override
     public void onItemClick(View view, int position, long id) {
         SportEntry sportEntry = sportEntryDataList.get(position);
-
-        // this block is not work!
-        //        if (BadNetworkAdapter.BAD_NETWORK.equals(view.getTag())) {
-        //            Log.d(TAG, "onItemClick: bad network!");
-        //            queryRunningSport();
-        //        }
-
-        DLOG.d(TAG, "position:" + position);
-        DLOG.d(TAG, "sportEntry:" + sportEntry);
         SharedPreferences sharedPreferences = getSharedPreferences(User.USER_SHARED_PREFERENCE, Context.MODE_PRIVATE);
         Boolean isFirstLaunch = sharedPreferences.getBoolean(AppConstant.IS_FIRST_LAUNCH, true);
         if (sportEntry.getType() == SportEntry.RUNNING_SPORT) {
             if (isFirstLaunch) {
-                showPermissionDialog();
+//                showPermissionDialog();
                 sharedPreferences.edit().putBoolean(AppConstant.IS_FIRST_LAUNCH,false).apply();
             } else {
                 SportDetailActivity.start(this, sportEntry);
             }
         } else {
             if (isFirstLaunch) {
-                showPermissionDialog();
+//                showPermissionDialog();
                 sharedPreferences.edit().putBoolean(AppConstant.IS_FIRST_LAUNCH,false).apply();
             } else {
                 SportsAreaListActivity.start(this, sportEntry);
