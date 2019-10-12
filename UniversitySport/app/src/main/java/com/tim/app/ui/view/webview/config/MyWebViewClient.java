@@ -7,7 +7,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import com.tim.app.ui.view.webview.WebViewActivity;
-import com.tim.app.util.NetUtil;
+import com.tim.app.util.NetworkUtil;
 
 
 /**
@@ -65,7 +65,7 @@ public class MyWebViewClient extends WebViewClient {
         } else {
             mActivity.mPageFinish = true;
         }
-        if (!NetUtil.isConnected(mActivity)) {
+        if (!NetworkUtil.isNetworkConnected(mActivity)) {
             mIWebPageView.hindProgressBar();
         }
         // html加载完成之后，添加监听图片的点击js函数

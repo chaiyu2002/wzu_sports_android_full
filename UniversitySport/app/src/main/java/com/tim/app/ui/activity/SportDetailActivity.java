@@ -77,6 +77,7 @@ import com.tim.app.ui.view.SlideUnlockView;
 import com.tim.app.ui.view.webview.WebViewActivity;
 import com.tim.app.util.BrightnessUtil;
 import com.tim.app.util.MathUtil;
+import com.tim.app.util.NetworkUtil;
 import com.tim.app.util.SystemUtil;
 
 import org.json.JSONException;
@@ -112,7 +113,7 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
     private AMap aMap;
     private LatLng lastLatLng = null;
     private UiSettings uiSettings;
-    private float zoomLevel = 19;//地图缩放级别，范围3-19,越大越精细
+    private float zoomLevel = 17;//地图缩放级别，范围3-19,越大越精细
     private Location firstLocation;
     private int firstLocationType;
 
@@ -500,14 +501,6 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
         LatLng newLatLng;
         Boolean isNormal = true;
 
-        Bundle bundle = location.getExtras();
-        if (bundle != null) {
-            errorCode = bundle.getInt(MyLocationStyle.ERROR_CODE);
-            errorInfo = bundle.getString(MyLocationStyle.ERROR_INFO);
-            // 定位类型，可能为GPS WIFI等，具体可以参考官网的定位SDK介绍
-            locationType = bundle.getInt(MyLocationStyle.LOCATION_TYPE);
-        }
-
         //屏幕到了锁屏的时间，调暗亮度
         WindowManager.LayoutParams params = getWindow().getAttributes();
         //screenKeepLightTime += interval / 1000;
@@ -520,18 +513,40 @@ public class SportDetailActivity extends BaseActivity implements AMap.OnMyLocati
 //            DLOG.d(TAG, "onMyLocationChange turn down light");
 //        }
 
-        DLOG.d(TAG, "locationType:" + locationType);
         if (location != null) {
+
+            Bundle bundle = location.getExtras();
+            if (bundle != null) {
+                errorCode = bundle.getInt(MyLocationStyle.ERROR_CODE);
+                errorInfo = bundle.getString(MyLocationStyle.ERROR_INFO);
+                // 定位类型，参考：https://lbs.amap.com/api/android-location-sdk/guide/utilities/location-type
+                locationType = bundle.getInt(MyLocationStyle.LOCATION_TYPE);
+            }
+
             //定位成功
             if (errorCode != 0) {
-                String errText = "正在定位中，GPS信号弱";
+                String errText = "正在定位中";
                 Toast.makeText(this, errText, Toast.LENGTH_SHORT).show();
                 return;
             } else {
+                // 定位精度不足，判断网络状态，提示用户打开WiFi
+                if (location.getAccuracy() > 10) {
+                    String msg;
+                    // 测试提示
+//                    String msg = "GPS信号弱，当前定位精度为" + location.getAccuracy() + "米, 定位类型：" + locationType;
+//                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+
+                    if (!NetworkUtil.isWifiOpened(this)) {
+                        msg = "请打开WiFi，可以帮助更好地定位";
+                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+                    } else {
+                        if (NetworkUtil.isWifiConnected(this) && !NetworkUtil.isNetworkConnected(this)) {
+                            msg = "当前的Wi-Fi连接没有连上互联网，请断开局域网连接，但不要关闭Wi-Fi，可以帮助更好地定位";
+                            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
                 newLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-                DLOG.d(TAG, "newLatLng: " + newLatLng);
-                DLOG.d(TAG, "定位成功");
-                // locationDialog.dismissCurrentDialog();
 
                 // 判断第一次，第一次会提示
                 if (lastLatLng == null) {
